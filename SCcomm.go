@@ -43,6 +43,8 @@ func handleConnection(c net.Conn, mchan chan<- string) {
 	c.Close()
 }
 
+func MakePacket(payload []byte)
+
 func main() {
 	port := flag.Int("port", 8080, "the port on which to listen for control messages")
 	flag.Parse()
@@ -52,6 +54,7 @@ func main() {
 	go listenClients(*port, mchan)
 	w := gowifly.NewWiFlyConnection()
 	//w.serialConn.write("GOGOGO\r")
+	w.Write("Hello!")
 
 	//var m string
 	for {
