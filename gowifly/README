@@ -1,0 +1,18 @@
+Warning, this code is not suitable for anything at the moment. It is under heavy
+development.
+
+# Usage
+
+This code attempts to normalize the state of the WiFly during setup. It does
+this by running a few blank lines and attempting to exit command mode. This
+means that we know that the WiFly should begin in data mode. *However*, if the
+module has a connection open, or is utilizing data mode for anything, this data
+will be sent to data mode. The library makes the assumption that the module
+should be in a clean state, but normalizes the data/command state for
+convenience.
+
+# TODO
+
+timeouts
+flushing serial line
+should we reboot the module at beginning?
