@@ -90,6 +90,6 @@ func (w *WiFlyConnection) SerialConnect() {
 	if err != nil {
 		log.Panic(err)
 	}
-	w.buffReader = bufio.NewReader(s)
+	//w.buffReader = bufio.NewReader(s)
 	w.serialConn = &s
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/lelandmiller/SCcomm/wiflyparsers"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	//"sync"
@@ -27,16 +28,19 @@ func main() {
 	//w.Write("Hello!")
 
 	// Setup input
-	go wiflyparsers.ParseInput(*w.Stream())
+	//go wiflyparsers.ParseInput(*w.Stream())
 
 	// Setup output
 	outchan := make(chan wiflyparsers.Packet, 100)
-	go wiflyparsers.WriteOutput(*w.Stream(), outchan)
-	outchan <- wiflyparsers.Packet{Payload: "TEST"}
+	//go wiflyparsers.WriteOutput(*w.Stream(), outchan)
+	//go wiflyparsers.WriteOutput(os.Stdout, outchan)
+	//outchan <- wiflyparsers.Packet{Payload: "TEST"}
 	//outchan <- wiflyparsers.Packet{Payload: "TEST2"}
 
 	for m := range mchan {
-		outchan <- wiflyparsers.Packet{Payload: m}
+		w.Write(m)
+		os.Stdout.Write([]byte(m))
+		//outchan <- wiflyparsers.Packet{Payload: m}
 		/*
 			m := <-mchan
 			switch m {
