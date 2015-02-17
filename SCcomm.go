@@ -2,15 +2,19 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"github.com/lelandmiller/gowifly"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 )
 
 // TODO should only accept from localhost
-func listenClients(mchan chan<- string) {
-	ln, err := net.Listen("tcp", ":8080")
+func listenClients(port int, mchan chan<- string) {
+	// TODO could change to unix socket
+	// ln, err := net.Listen("tcp", "localhost:8080")
+	ln, err := net.Listen("tcp", strings.Join([]string{":", strconv.Itoa(port)}, ""))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,10 +44,12 @@ func handleConnection(c net.Conn, mchan chan<- string) {
 }
 
 func main() {
+	port := flag.Int("port", 8080, "the port on which to listen for control messages")
+	flag.Parse()
 	// TODO is buffer size good? What happens if buffer full. Looked it up, it
 	// should buffer
 	mchan := make(chan string, 500)
-	go listenClients(mchan)
+	go listenClients(*port, mchan)
 	w := gowifly.NewWiFlyConnection()
 	//w.serialConn.write("GOGOGO\r")
 
