@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
-	"github.com/lelandmiller/gowifly"
+	"github.com/lelandmiller/SCcomm/gowifly"
 	"log"
 	"net"
 	"strconv"
