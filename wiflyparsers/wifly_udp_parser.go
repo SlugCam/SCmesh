@@ -44,7 +44,7 @@ func ParseInput(in io.Reader) {
 	for {
 		err := dec.Decode(&q)
 		if err != nil {
-			log.Fatal("decode error 1:", err)
+			log.Print("decode error 1:", err)
 		}
 		fmt.Printf("Packet: %q\n", q.Payload)
 	}
