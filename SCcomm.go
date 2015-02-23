@@ -38,11 +38,9 @@ func main() {
 	}
 	*/
 
-	/*
-		var wg sync.WaitGroup
-		wg.Add(1)
-		wg.Wait()
-	*/
+	var wg sync.WaitGroup
+	wg.Add(1)
+	wg.Wait()
 }
 
 // TODO should only accept from localhost
