@@ -9,6 +9,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	//"sync"
 )
 
 func main() {
@@ -16,31 +17,43 @@ func main() {
 	flag.Parse()
 	// TODO is buffer size good? What happens if buffer full. Looked it up, it
 	// should buffer
+
+	// This is listener for control messages
 	mchan := make(chan string, 500)
 	go listenClients(*port, mchan)
-	w := gowifly.NewWiFlyConnection()
-	//w.serialConn.write("GOGOGO\r")
-	w.Write("Hello!")
 
+	// Setup Wifly
+	w := gowifly.NewWiFlyConnection()
+	//w.Write("Hello!")
+
+	// Setup input
+	go wiflyparsers.ParseInput(*w.Stream())
+
+	// Setup output
 	outchan := make(chan wiflyparsers.Packet, 100)
 	go wiflyparsers.WriteOutput(*w.Stream(), outchan)
 	outchan <- wiflyparsers.Packet{Payload: "TEST"}
+	//outchan <- wiflyparsers.Packet{Payload: "TEST2"}
 
-	/*var m string
-	for {
-		m := <-mchan
-		switch m {
-		case "comm":
-			w.EnterCommandMode()
-		default:
-			w.WriteCommand(m)
-		}
+	for m := range mchan {
+		outchan <- wiflyparsers.Packet{Payload: m}
+		/*
+			m := <-mchan
+			switch m {
+			case "comm":
+				w.EnterCommandMode()
+			default:
+				outchan <- wiflyparsers.Packet{Payload: m}
+				w.WriteCommand(m)
+			}
+		*/
 	}
-	*/
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	wg.Wait()
+	/*
+		var wg sync.WaitGroup
+		wg.Add(1)
+		wg.Wait()
+	*/
 }
 
 // TODO should only accept from localhost

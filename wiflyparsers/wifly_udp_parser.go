@@ -1,7 +1,10 @@
 package wiflyparsers
 
 import (
-	"encoding/json"
+	"encoding/gob"
+	"log"
+	//"encoding/json"
+	"fmt"
 	"io"
 )
 
@@ -34,12 +37,35 @@ func ParseWiflyStream(in *io.Reader, delim string) (packet chan string, response
 }
 */
 
+func ParseInput(in io.Reader) {
+	dec := gob.NewDecoder(in)
+	// Decode (receive) and print the values.
+	var q Packet
+	for {
+		err := dec.Decode(&q)
+		if err != nil {
+			log.Fatal("decode error 1:", err)
+		}
+		fmt.Printf("Packet: %q\n", q.Payload)
+	}
+}
+
 // WriteOutput handles the writing of packets to the WiFly module.
 func WriteOutput(out io.Writer, in <-chan Packet) {
+	enc := gob.NewEncoder(out)
+
 	for c := range in {
-		// TODO check error
-		b, _ := json.Marshal(c)
-		out.Write(b)
+		err := enc.Encode(c)
+		if err != nil {
+			log.Fatal("encode error:", err)
+		}
 	}
+	/*
+		for c := range in {
+			// TODO check error
+			b, _ := json.Marshal(c)
+			out.Write(b)
+		}
+	*/
 
 }
