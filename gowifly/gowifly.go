@@ -42,6 +42,9 @@ func (wifly *WiFlyConnection) write(command string) {
 func (wifly *WiFlyConnection) Write(command string) {
 	wifly.write(command)
 }
+func (wifly *WiFlyConnection) Stream() *io.ReadWriteCloser {
+	return wifly.serialConn
+}
 
 // TODO should return error
 // Does not expect the command to contain newlines or carriage returns

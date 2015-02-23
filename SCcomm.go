@@ -4,11 +4,46 @@ import (
 	"bufio"
 	"flag"
 	"github.com/lelandmiller/SCcomm/gowifly"
+	"github.com/lelandmiller/SCcomm/wiflyparsers"
 	"log"
 	"net"
 	"strconv"
 	"strings"
 )
+
+func main() {
+	port := flag.Int("port", 8080, "the port on which to listen for control messages")
+	flag.Parse()
+	// TODO is buffer size good? What happens if buffer full. Looked it up, it
+	// should buffer
+	mchan := make(chan string, 500)
+	go listenClients(*port, mchan)
+	w := gowifly.NewWiFlyConnection()
+	//w.serialConn.write("GOGOGO\r")
+	w.Write("Hello!")
+
+	outchan := make(chan wiflyparsers.Packet, 100)
+	go wiflyparsers.WriteOutput(*w.Stream(), outchan)
+	outchan <- wiflyparsers.Packet{Payload: "TEST"}
+
+	/*var m string
+	for {
+		m := <-mchan
+		switch m {
+		case "comm":
+			w.EnterCommandMode()
+		default:
+			w.WriteCommand(m)
+		}
+	}
+	*/
+
+	/*
+		var wg sync.WaitGroup
+		wg.Add(1)
+		wg.Wait()
+	*/
+}
 
 // TODO should only accept from localhost
 func listenClients(port int, mchan chan<- string) {
@@ -41,35 +76,4 @@ func handleConnection(c net.Conn, mchan chan<- string) {
 		//fmt.Println(string(reply))
 	}
 	c.Close()
-}
-
-func MakePacket(payload []byte)
-
-func main() {
-	port := flag.Int("port", 8080, "the port on which to listen for control messages")
-	flag.Parse()
-	// TODO is buffer size good? What happens if buffer full. Looked it up, it
-	// should buffer
-	mchan := make(chan string, 500)
-	go listenClients(*port, mchan)
-	w := gowifly.NewWiFlyConnection()
-	//w.serialConn.write("GOGOGO\r")
-	w.Write("Hello!")
-
-	//var m string
-	for {
-		m := <-mchan
-		switch m {
-		case "comm":
-			w.EnterCommandMode()
-		default:
-			w.WriteCommand(m)
-		}
-	}
-
-	/*
-		var wg sync.WaitGroup
-		wg.Add(1)
-		wg.Wait()
-	*/
 }
