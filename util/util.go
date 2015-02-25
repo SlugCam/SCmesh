@@ -1,4 +1,4 @@
-package wiflyparsers
+package util
 
 // max takes two integers and returns the larger of the two.
 func max(a int, b int) int {
@@ -7,9 +7,4 @@ func max(a int, b int) int {
 	} else {
 		return b
 	}
-}
-
-// couldBe takes
-func couldBe() {
-
 }

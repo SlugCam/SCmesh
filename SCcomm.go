@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"github.com/lelandmiller/SCcomm/gowifly"
-	"github.com/lelandmiller/SCcomm/wiflyparsers"
+	//"github.com/lelandmiller/SCcomm/wiflyparsers"
 	"log"
 	"net"
 	"os"
@@ -31,7 +31,7 @@ func main() {
 	//go wiflyparsers.ParseInput(*w.Stream())
 
 	// Setup output
-	outchan := make(chan wiflyparsers.Packet, 100)
+	// outchan := make(chan wiflyparsers.Packet, 100)
 	//go wiflyparsers.WriteOutput(*w.Stream(), outchan)
 	//go wiflyparsers.WriteOutput(os.Stdout, outchan)
 	//outchan <- wiflyparsers.Packet{Payload: "TEST"}
