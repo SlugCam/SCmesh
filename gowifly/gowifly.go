@@ -8,27 +8,18 @@ import (
 	"io"
 	"log"
 	"strings"
-	//"sync"
 )
 
 type WiFlyConnection struct {
 	serialConn  *io.ReadWriteCloser
-	buffReader  *bufio.Reader
 	commandMode bool
 }
 
 // TODO should return error
 func (wifly *WiFlyConnection) EnterCommandMode() {
 	log.Print("Entering command mode")
-	r := *wifly.buffReader
 	wifly.write("$$$")
 
-	reply, _ := r.ReadBytes('\n')
-	//TODO check error
-	fmt.Println("R1:", string(reply))
-	reply, _ = r.ReadBytes('\n')
-	//TODO check error
-	fmt.Println("R2:", string(reply))
 }
 
 // TODO should return error

@@ -1,4 +1,4 @@
-package wiflyparsers
+package prefilter
 
 import (
 	"testing"
@@ -60,9 +60,11 @@ func TestPrefilterCommandLine(t *testing.T) {
 func TestPrefilterExitCommandLine(t *testing.T) {
 	r := util.NewMockReader()
 	_, resp := Prefilter(r)
-	cmdValidator := util.MakeSequenceValidator([]string{"CMD", "TEST", "EXIT"})
+	cmdValidator := util.MakeSequenceValidator([]string{"CMD", "TEST", "EXIT", "CMD", "This line"})
 	go func() {
 		r.Write([]byte("CMD\r\nTEST\r\nEXIT\r\nasldfjlkasdfj\r\nasdkfj"))
+		time.Sleep(50 * time.Millisecond)
+		r.Write([]byte("asldkfjCMD\r\nThis line\r\n"))
 	}()
 	for i := 0; i < 3; i++ {
 		select {
@@ -74,11 +76,6 @@ func TestPrefilterExitCommandLine(t *testing.T) {
 		case <-time.After(timeoutDelay):
 			t.Errorf("Did not receive needed response line")
 		}
-	}
-	select {
-	case r := <-resp:
-		t.Errorf("Received command response %#v after exiting command mode", string(r))
-	case <-time.After(timeoutDelay):
 	}
 }
 

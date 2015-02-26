@@ -3,11 +3,12 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
+
 	"github.com/lelandmiller/SCcomm/gowifly"
-	//"github.com/lelandmiller/SCcomm/wiflyparsers"
+	"github.com/lelandmiller/SCcomm/prefilter"
 	"log"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	//"sync"
@@ -17,7 +18,7 @@ func main() {
 	port := flag.Int("port", 8080, "the port on which to listen for control messages")
 	flag.Parse()
 	// TODO is buffer size good? What happens if buffer full. Looked it up, it
-	// should buffer
+	// should block
 
 	// This is listener for control messages
 	mchan := make(chan string, 500)
@@ -25,32 +26,28 @@ func main() {
 
 	// Setup Wifly
 	w := gowifly.NewWiFlyConnection()
-	//w.Write("Hello!")
 
 	// Setup input
-	//go wiflyparsers.ParseInput(*w.Stream())
+	rawPackets, _ := prefilter.Prefilter(*w.Stream())
 
-	// Setup output
-	// outchan := make(chan wiflyparsers.Packet, 100)
-	//go wiflyparsers.WriteOutput(*w.Stream(), outchan)
-	//go wiflyparsers.WriteOutput(os.Stdout, outchan)
-	//outchan <- wiflyparsers.Packet{Payload: "TEST"}
-	//outchan <- wiflyparsers.Packet{Payload: "TEST2"}
+	// Print raw data
+	go func() {
+		select {
+		case p := <-rawPackets:
+			fmt.Printf("Received packet: %#v\n", string(p))
+		case r := <-rawPackets:
+			fmt.Printf("Received response: %#v\n", string(r))
+		}
+	}()
 
 	for m := range mchan {
-		w.Write(m)
-		os.Stdout.Write([]byte(m))
-		//outchan <- wiflyparsers.Packet{Payload: m}
-		/*
-			m := <-mchan
-			switch m {
-			case "comm":
-				w.EnterCommandMode()
-			default:
-				outchan <- wiflyparsers.Packet{Payload: m}
-				w.WriteCommand(m)
-			}
-		*/
+		switch m {
+		case "$$$":
+			w.EnterCommandMode()
+		default:
+			w.WriteCommand(m)
+			fmt.Printf("Entered command: %#v\n", m)
+		}
 	}
 
 	/*

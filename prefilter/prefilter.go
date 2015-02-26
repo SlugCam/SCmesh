@@ -1,7 +1,7 @@
 // Contains the raw stream parser for the WiFly UART connection for the SlugCam
 // project. Used some ideas from
 // http://blog.gopheracademy.com/advent-2014/parsers-lexers/.
-package wiflyparsers
+package prefilter
 
 import (
 	"bufio"
