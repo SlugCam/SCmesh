@@ -1,8 +1,6 @@
 package wiflyparsers
 
 import (
-	"bytes"
-	"strings"
 	"testing"
 	"time"
 
@@ -34,17 +32,53 @@ func TestPrefilterNothing(t *testing.T) {
 // TestPrefilterCommandLine tests if we can receive one response line from
 // command mode.
 func TestPrefilterCommandLine(t *testing.T) {
-	r := strings.NewReader("saldkfjl\x00\x04\x1CCMD\r\nThis line\r\n")
+	r := util.NewMockReader()
 	pack, resp := Prefilter(r)
-	select {
-	case <-pack:
-		t.Errorf("Received from packet channel, should have produced nothing")
-	case r := <-resp:
-		if !bytes.Equal(r, []byte("This line")) {
-			t.Errorf("Received incorrect response: %#v", string(r))
+	cmdValidator := util.MakeSequenceValidator([]string{"CMD", "This line"})
+	go func() {
+		r.Write([]byte("saldkfjl\x00\x04\x1C"))
+		time.Sleep(50 * time.Millisecond)
+		r.Write([]byte("asldkfjCMD\r\nThis line\r\n"))
+	}()
+	for i := 0; i < 2; i++ {
+		select {
+		case <-pack:
+			t.Errorf("Received from packet channel, should have produced nothing")
+		case r := <-resp:
+			valid, mess := cmdValidator(string(r))
+			if !valid {
+				t.Errorf(mess)
+			}
+		case <-time.After(timeoutDelay):
+			t.Errorf("Did not receive needed response line")
 		}
+	}
+}
+
+// TestPrefilterCommandLine tests if we can receive one response line from
+// command mode.
+func TestPrefilterExitCommandLine(t *testing.T) {
+	r := util.NewMockReader()
+	_, resp := Prefilter(r)
+	cmdValidator := util.MakeSequenceValidator([]string{"CMD", "TEST", "EXIT"})
+	go func() {
+		r.Write([]byte("CMD\r\nTEST\r\nEXIT\r\nasldfjlkasdfj\r\nasdkfj"))
+	}()
+	for i := 0; i < 3; i++ {
+		select {
+		case r := <-resp:
+			valid, mess := cmdValidator(string(r))
+			if !valid {
+				t.Errorf(mess)
+			}
+		case <-time.After(timeoutDelay):
+			t.Errorf("Did not receive needed response line")
+		}
+	}
+	select {
+	case r := <-resp:
+		t.Errorf("Received command response %#v after exiting command mode", string(r))
 	case <-time.After(timeoutDelay):
-		t.Errorf("Did not receive response line")
 	}
 }
 

@@ -22,3 +22,23 @@ func TestMax(t *testing.T) {
 		}
 	}
 }
+
+func TestSequenceValidator(t *testing.T) {
+	validator := MakeSequenceValidator([]string{"Hello", "World"})
+
+	valid, _ := validator("Hello")
+	if valid == false {
+		t.Errorf("Validator function returned false when objects matched")
+	}
+
+	valid, _ = validator("Not matching")
+	if valid == true {
+		t.Errorf("Validator function returned true when objects did not match")
+	}
+
+	valid, _ = validator("Too far")
+	if valid == true {
+		t.Errorf("Validator returned true when called too many times")
+	}
+
+}
