@@ -144,6 +144,7 @@ func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []b
 	responseLines = responses
 
 	go func() {
+		log.Debug("Prefilter has begun scanning input")
 		s := newRawScanner(in)
 		// TODO, should they be declared outside?
 		for {

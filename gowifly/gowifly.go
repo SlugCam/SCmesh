@@ -17,7 +17,7 @@ type WiFlyConnection struct {
 
 // TODO should return error
 func (wifly *WiFlyConnection) EnterCommandMode() {
-	log.Print("Entering command mode")
+	//log.Print("Entering command mode")
 	wifly.write("$$$")
 
 }
@@ -60,14 +60,8 @@ func echoSerial(s *io.ReadWriteCloser) {
 
 }
 
-// Simply echos all data from the serial port to stdout
-// We can require no debug messages be printed at start
-// Should have error checking in case we get off.
-func inputHandler(s *io.ReadWriteCloser) {
-
-}
-
 // Returns a new WiFlyConnection connected to a serial port and normalized.
+// TODO normalize
 func NewWiFlyConnection() *WiFlyConnection {
 	conn := new(WiFlyConnection)
 	conn.SerialConnect()

@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
 	"io"
 
 	"net"
@@ -42,19 +41,18 @@ func main() {
 			case p := <-rawPackets:
 				log.Debugf("Received packet: %#v", string(p))
 			case r := <-responseLines:
-				fmt.Printf("Received response: %#v", string(r))
 				log.Debugf("Received response: %#v", string(r))
 			}
 		}
 	}()
 
 	for m := range mchan {
+		log.Printf("Entered command: %#v", m)
 		switch m {
 		case "$$$":
 			w.EnterCommandMode()
 		default:
 			w.WriteCommand(m)
-			log.Printf("Entered command: %#v", m)
 		}
 	}
 
