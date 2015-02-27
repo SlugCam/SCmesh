@@ -5,18 +5,22 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/lelandmiller/SCcomm/gowifly"
-	"github.com/lelandmiller/SCcomm/prefilter"
-	"log"
 	"net"
 	"strconv"
 	"strings"
-	//"sync"
+
+	log "github.com/Sirupsen/logrus" // A replacement for the stdlib log
+
+	"github.com/lelandmiller/SCcomm/gowifly"
+	"github.com/lelandmiller/SCcomm/prefilter"
 )
 
 func main() {
+	log.SetLevel(log.DebugLevel)
 	port := flag.Int("port", 8080, "the port on which to listen for control messages")
 	flag.Parse()
+
+	log.Info("Starting SCcomm")
 	// TODO is buffer size good? What happens if buffer full. Looked it up, it
 	// should block
 
@@ -28,15 +32,18 @@ func main() {
 	w := gowifly.NewWiFlyConnection()
 
 	// Setup input
-	rawPackets, _ := prefilter.Prefilter(*w.Stream())
+	rawPackets, responseLines := prefilter.Prefilter(*w.Stream())
 
 	// Print raw data
 	go func() {
-		select {
-		case p := <-rawPackets:
-			fmt.Printf("Received packet: %#v\n", string(p))
-		case r := <-rawPackets:
-			fmt.Printf("Received response: %#v\n", string(r))
+		for {
+			select {
+			case p := <-rawPackets:
+				log.Debugf("Received packet: %#v", string(p))
+			case r := <-responseLines:
+				fmt.Printf("Received response: %#v", string(r))
+				log.Debugf("Received response: %#v", string(r))
+			}
 		}
 	}()
 
@@ -46,7 +53,7 @@ func main() {
 			w.EnterCommandMode()
 		default:
 			w.WriteCommand(m)
-			fmt.Printf("Entered command: %#v\n", m)
+			log.Printf("Entered command: %#v", m)
 		}
 	}
 
@@ -61,7 +68,7 @@ func main() {
 func listenClients(port int, mchan chan<- string) {
 	// TODO could change to unix socket
 	// ln, err := net.Listen("tcp", "localhost:8080")
-	ln, err := net.Listen("tcp", strings.Join([]string{":", strconv.Itoa(port)}, ""))
+	ln, err := net.Listen("tcp", strings.Join([]string{"localhost:", strconv.Itoa(port)}, ""))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,10 +89,9 @@ func handleConnection(c net.Conn, mchan chan<- string) {
 	for {
 		reply, err := reader.ReadBytes('\n')
 		if err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		mchan <- strings.Trim(string(reply), "\n\r ")
-		//fmt.Println(string(reply))
 	}
 	c.Close()
 }

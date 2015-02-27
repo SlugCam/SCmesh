@@ -4,9 +4,9 @@ package gowifly
 import (
 	"bufio"
 	"fmt"
+	log "github.com/Sirupsen/logrus" // A replacement for the stdlib log
 	"github.com/tarm/goserial"
 	"io"
-	"log"
 	"strings"
 )
 

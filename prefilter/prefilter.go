@@ -6,8 +6,8 @@ package prefilter
 import (
 	"bufio"
 	"bytes"
+	log "github.com/Sirupsen/logrus" // A replacement for the stdlib log
 	"io"
-	"log"
 	"time"
 )
 
@@ -152,6 +152,7 @@ func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []b
 			if found {
 				switch token {
 				case COMM_TOKEN:
+					log.Printf("Prefilter command sequence detected")
 					s.readCommandLines(responses)
 				case PACK_TOKEN:
 				}
