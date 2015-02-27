@@ -124,15 +124,11 @@ func (s *rawScanner) readCommandLines(responseLines chan<- []byte) {
 	}
 }
 
-/* scanRawPacket
-func scanRawPacket() (p []byte, err error) {
-	// Read length
-
-	// Read until escape or length
-	return nil, nil
-
+// TODO this and write tests
+// readRawPacket scans a raw packet. Packet size is assumed to be the WiFly
+// maximum of 1460.
+func (s *rawScanner) readRawPacket(rawPackets chan<- []byte) {
 }
-*/
 
 func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []byte) {
 	// Make the channels and set the return channels, this allows us to use the

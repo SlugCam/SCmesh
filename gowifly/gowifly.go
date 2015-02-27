@@ -1,4 +1,5 @@
 // Lines from wifly end \r\n
+// TODO write tests for scanner functions as well
 package gowifly
 
 import (
@@ -42,22 +43,6 @@ func (wifly *WiFlyConnection) Stream() *io.ReadWriteCloser {
 func (wifly *WiFlyConnection) WriteCommand(command string) {
 	command = strings.Join([]string{command, "\r"}, "")
 	wifly.write(command)
-}
-
-// Simply echos all data from the serial port to stdout
-func echoSerial(s *io.ReadWriteCloser) {
-	// http://stackoverflow.com/questions/17599232/reading-from-serial-port-with-while-loop
-	reader := bufio.NewReader(*s)
-	for true {
-		reply, err := reader.ReadBytes('\n')
-		if err != nil {
-			panic(err)
-		}
-		m := strings.Replace(string(reply), "\n", "\\n", -1)
-		m = strings.Replace(m, "\r", "\\r", -1)
-		fmt.Println(string(m))
-	}
-
 }
 
 // Returns a new WiFlyConnection connected to a serial port and normalized.
