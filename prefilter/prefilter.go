@@ -18,7 +18,7 @@ const TIMEOUT = 50 * time.Millisecond
 
 // Constants for the escape sequences for the parser. IMPORTANT, PACK_SEQ and
 // COMM_SEQ need to be the same length and must both begin with the letter 'C'.
-// If this requirement needs to change then readEscape() will have to be
+// If this requirement needs to change then checkEscape() will have to be
 // modified.
 const (
 	PACK_SEQ = "CBU\r\n"
@@ -76,10 +76,9 @@ func (s *rawScanner) readBytes(delim byte) (line []byte) {
 	return
 }
 
-// readEscape returns true and the escape sequence if it is an escape, otherwise
-// returns false and token is invalid. If it returns true it will consume the
-// input for the escape sequence otherwise it will not.
-func (s *rawScanner) readEscape() (found bool, val token) {
+// checkEscape returns true and the escape sequence if it is an escape, otherwise
+// returns false and token is invalid.
+func (s *rawScanner) checkEscape() (found bool, val token) {
 	// TODO maybe this should not be hardcoded?
 	// First check if character is a C
 	first := s.peek(1)
@@ -145,7 +144,7 @@ func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []b
 		// TODO, should they be declared outside?
 		for {
 			// Check if it might be an escape sequence
-			found, token := s.readEscape()
+			found, token := s.checkEscape()
 			if found {
 				switch token {
 				case COMM_TOKEN:
