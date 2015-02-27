@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 
 	"net"
 	"strconv"
@@ -76,7 +77,9 @@ func listenClients(port int, mchan chan<- string) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Fatal(err)
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Fatal("Error in TCP command connection listener")
 		}
 		go handleConnection(conn, mchan)
 	}
@@ -89,7 +92,13 @@ func handleConnection(c net.Conn, mchan chan<- string) {
 	for {
 		reply, err := reader.ReadBytes('\n')
 		if err != nil {
-			log.Panic(err)
+			if err == io.EOF {
+				break
+			} else {
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Error("Error in TCP command connection")
+			}
 		}
 		mchan <- strings.Trim(string(reply), "\n\r ")
 	}
