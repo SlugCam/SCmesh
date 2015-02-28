@@ -1,9 +1,12 @@
+// TODO test prefilter timeout on escape
 package prefilter
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
+	"github.com/lelandmiller/SCcomm/packet"
 	"github.com/lelandmiller/SCcomm/util"
 )
 
@@ -66,7 +69,7 @@ func TestPrefilterExitCommandLine(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		r.Write([]byte("asldkfjCMD\r\nThis line\r\n"))
 	}()
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		select {
 		case r := <-resp:
 			valid, mess := cmdValidator(string(r))
@@ -79,4 +82,40 @@ func TestPrefilterExitCommandLine(t *testing.T) {
 	}
 }
 
-// TODO test prefilter timeout on escape
+// TestReadRawPacket tests the readRawPacket method of the scanner. It sends
+// junk, a valid packet
+func TestReadRawPacket(t *testing.T) {
+	//r := new(bytes.Buffer)
+	r := util.NewMockReader()
+	ch, _ := Prefilter(r)
+
+	packet1 := make([]byte, packet.RAW_PACKET_SIZE)
+	copy(packet1, []byte(PACK_SEQ))
+
+	packet2 := make([]byte, packet.RAW_PACKET_SIZE)
+	copy(packet2, bytes.Join([][]byte{[]byte(PACK_SEQ), []byte("THISIS AT TEST")}, []byte("")))
+
+	cmdValidator := util.MakeSequenceValidator([]string{string(packet1), string(packet2)})
+
+	go func() {
+		r.Write([]byte("CMD\r\nTEST\r\nEXIT\r\nasldfjlkasdfj\r\nasdkfj"))
+		time.Sleep(50 * time.Millisecond)
+		r.Write(packet1)
+		r.Write([]byte("sladfjkalsdfjiweofn   sadlfjk"))
+		r.Write([]byte(PACK_SEQ))
+		r.Write([]byte("sladfjkalsdfjiweofn   sadlfjk"))
+		r.Write(packet2)
+	}()
+
+	for i := 1; i <= 2; i++ {
+		select {
+		case p := <-ch:
+			valid, mess := cmdValidator(string(p))
+			if !valid {
+				t.Errorf(mess)
+			}
+		case <-time.After(timeoutDelay):
+			t.Errorf("Did not receive packet%d", i)
+		}
+	}
+}

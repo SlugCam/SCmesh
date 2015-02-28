@@ -127,6 +127,7 @@ func (s *rawScanner) readCommandLines(responseLines chan<- []byte) {
 // readRawPacket scans a raw packet. Packet size is assumed to be the WiFly
 // maximum of 1460.
 func (s *rawScanner) readRawPacket(rawPackets chan<- []byte) {
+	//packet.RAW_PACKET_SIZE
 }
 
 func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []byte) {
@@ -151,6 +152,8 @@ func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []b
 					log.Printf("Prefilter command sequence detected")
 					s.readCommandLines(responses)
 				case PACK_TOKEN:
+					log.Printf("Packet UDP command sequence detected")
+					s.readRawPacket(packets)
 				}
 			} else {
 				s.read()
