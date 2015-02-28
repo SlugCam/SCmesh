@@ -6,9 +6,11 @@ package prefilter
 import (
 	"bufio"
 	"bytes"
-	log "github.com/Sirupsen/logrus" // A replacement for the stdlib log
 	"io"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/lelandmiller/SCcomm/packet" // A replacement for the stdlib log
 )
 
 type token int
@@ -127,7 +129,24 @@ func (s *rawScanner) readCommandLines(responseLines chan<- []byte) {
 // readRawPacket scans a raw packet. Packet size is assumed to be the WiFly
 // maximum of 1460.
 func (s *rawScanner) readRawPacket(rawPackets chan<- []byte) {
-	//packet.RAW_PACKET_SIZE
+	b := make([]byte, 0, packet.RAW_PACKET_SIZE)
+
+	// First read the command sequence at the beginning of the packet
+	for i := 0; i < len(PACK_SEQ); i++ {
+		b = append(b, s.read())
+	}
+
+	// Now read the rest of the packet
+	for len(b) < packet.RAW_PACKET_SIZE {
+		found, _ := s.checkEscape()
+		if found {
+			log.Info("readRawPacket: packet discarded because command sequence encountered")
+			return
+		} else {
+			b = append(b, s.read())
+		}
+	}
+	rawPackets <- b
 }
 
 func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []byte) {
