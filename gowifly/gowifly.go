@@ -3,12 +3,12 @@
 package gowifly
 
 import (
-	"bufio"
-	"fmt"
-	log "github.com/Sirupsen/logrus" // A replacement for the stdlib log
-	"github.com/tarm/goserial"
 	"io"
 	"strings"
+
+	log "github.com/Sirupsen/logrus" // A replacement for the stdlib log
+	"github.com/lelandmiller/SCcomm/packet"
+	"github.com/tarm/goserial"
 )
 
 type WiFlyConnection struct {
@@ -43,6 +43,9 @@ func (wifly *WiFlyConnection) Stream() *io.ReadWriteCloser {
 func (wifly *WiFlyConnection) WriteCommand(command string) {
 	command = strings.Join([]string{command, "\r"}, "")
 	wifly.write(command)
+}
+func (wifly *WiFlyConnection) WriteRawPacket(p *packet.Packet) {
+	wifly.write(string(p.WireFormat()))
 }
 
 // Returns a new WiFlyConnection connected to a serial port and normalized.

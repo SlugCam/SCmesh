@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lelandmiller/SCcomm/packet"
+	"github.com/lelandmiller/SCcomm/constants"
 	"github.com/lelandmiller/SCcomm/util"
 )
 
@@ -89,11 +89,11 @@ func TestReadRawPacket(t *testing.T) {
 	r := util.NewMockReader()
 	ch, _ := Prefilter(r)
 
-	packet1 := make([]byte, packet.RAW_PACKET_SIZE)
-	copy(packet1, []byte(PACK_SEQ))
+	packet1 := make([]byte, constants.RAW_PACKET_SIZE)
+	copy(packet1, []byte(constants.PACK_SEQ))
 
-	packet2 := make([]byte, packet.RAW_PACKET_SIZE)
-	copy(packet2, bytes.Join([][]byte{[]byte(PACK_SEQ), []byte("THISIS AT TEST")}, []byte("")))
+	packet2 := make([]byte, constants.RAW_PACKET_SIZE)
+	copy(packet2, bytes.Join([][]byte{[]byte(constants.PACK_SEQ), []byte("THISIS AT TEST")}, []byte("")))
 
 	cmdValidator := util.MakeSequenceValidator([]string{string(packet1), string(packet2)})
 
@@ -102,7 +102,7 @@ func TestReadRawPacket(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		r.Write(packet1)
 		r.Write([]byte("sladfjkalsdfjiweofn   sadlfjk"))
-		r.Write([]byte(PACK_SEQ))
+		r.Write([]byte(constants.PACK_SEQ))
 		r.Write([]byte("sladfjkalsdfjiweofn   sadlfjk"))
 		r.Write(packet2)
 	}()

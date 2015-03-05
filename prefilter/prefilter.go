@@ -10,23 +10,10 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/lelandmiller/SCcomm/packet" // A replacement for the stdlib log
+	"github.com/lelandmiller/SCcomm/constants"
 )
 
 type token int
-
-// TODO magic number
-const TIMEOUT = 50 * time.Millisecond
-
-// Constants for the escape sequences for the parser. IMPORTANT, PACK_SEQ and
-// COMM_SEQ need to be the same length and must both begin with the letter 'C'.
-// If this requirement needs to change then checkEscape() will have to be
-// modified.
-const (
-	PACK_SEQ = "CBU\r\n"
-	COMM_SEQ = "CMD\r\n"
-	EXIT_SEQ = "EXIT\r\n"
-)
 
 const (
 	PACK_TOKEN = iota
@@ -78,9 +65,9 @@ func (s *rawScanner) readBytes(delim byte) (line []byte) {
 	return
 }
 
-// checkEscape returns true and the escape sequence if it is an escape, otherwise
+// checkDelimiter returns true and the escape sequence if it is an escape, otherwise
 // returns false and token is invalid.
-func (s *rawScanner) checkEscape() (found bool, val token) {
+func (s *rawScanner) checkDelimiter() (found bool, val token) {
 	// TODO maybe this should not be hardcoded?
 	// First check if character is a C
 	first := s.peek(1)
@@ -90,21 +77,21 @@ func (s *rawScanner) checkEscape() (found bool, val token) {
 	}
 
 	ch := make(chan []byte)
-	go func() { ch <- s.peek(len(COMM_SEQ)) }()
+	go func() { ch <- s.peek(len(constants.COMM_SEQ)) }()
 	select {
 	case b := <-ch:
 		switch {
-		case bytes.Equal(b, []byte(COMM_SEQ)):
+		case bytes.Equal(b, []byte(constants.COMM_SEQ)):
 			found = true
 			val = COMM_TOKEN
-		case bytes.Equal(b, []byte(PACK_SEQ)):
+		case bytes.Equal(b, []byte(constants.PACK_SEQ)):
 			found = true
 			val = PACK_TOKEN
 		default:
 			found = false
 		}
 
-	case <-time.After(TIMEOUT):
+	case <-time.After(constants.DELIM_SEQ_TIMEOUT):
 		found = false
 	}
 	return
@@ -119,7 +106,7 @@ func (s *rawScanner) readCommandLines(responseLines chan<- []byte) {
 	for {
 		b := s.readBytes('\n')
 		responseLines <- bytes.TrimSpace(b)
-		if bytes.Equal(b, []byte(EXIT_SEQ)) {
+		if bytes.Equal(b, []byte(constants.EXIT_SEQ)) {
 			break
 		}
 	}
@@ -129,16 +116,16 @@ func (s *rawScanner) readCommandLines(responseLines chan<- []byte) {
 // readRawPacket scans a raw packet. Packet size is assumed to be the WiFly
 // maximum of 1460.
 func (s *rawScanner) readRawPacket(rawPackets chan<- []byte) {
-	b := make([]byte, 0, packet.RAW_PACKET_SIZE)
+	b := make([]byte, 0, constants.RAW_PACKET_SIZE)
 
 	// First read the command sequence at the beginning of the packet
-	for i := 0; i < len(PACK_SEQ); i++ {
+	for i := 0; i < len(constants.PACK_SEQ); i++ {
 		b = append(b, s.read())
 	}
 
 	// Now read the rest of the packet
-	for len(b) < packet.RAW_PACKET_SIZE {
-		found, _ := s.checkEscape()
+	for len(b) < constants.RAW_PACKET_SIZE {
+		found, _ := s.checkDelimiter()
 		if found {
 			log.Info("readRawPacket: packet discarded because command sequence encountered")
 			return
@@ -164,7 +151,7 @@ func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []b
 		// TODO, should they be declared outside?
 		for {
 			// Check if it might be an escape sequence
-			found, token := s.checkEscape()
+			found, token := s.checkDelimiter()
 			if found {
 				switch token {
 				case COMM_TOKEN:
