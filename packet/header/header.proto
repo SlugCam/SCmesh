@@ -1,0 +1,13 @@
+package header;
+
+message Header {
+    required string receiver = 1;
+
+    message RouteRequest {
+        required string destination = 1;
+    }
+
+    repeated RouteRequest route_request = 2;
+    
+
+}

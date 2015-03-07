@@ -97,21 +97,6 @@ func (s *rawScanner) checkDelimiter() (found bool, val token) {
 	return
 }
 
-// readCommandLines does the parsing for command mode. Since in command mode the
-// WiFly output is well defined this function is simpler than scanning in data
-// mode. All we have to do is get lines and look for the exit sequence. Times
-// out while seeking rest of escape. If it is an escape sequence it should not
-// take much time to receive the whole thing.
-func (s *rawScanner) readCommandLines(responseLines chan<- []byte) {
-	for {
-		b := s.readBytes('\n')
-		responseLines <- bytes.TrimSpace(b)
-		if bytes.Equal(b, []byte(constants.EXIT_SEQ)) {
-			break
-		}
-	}
-}
-
 // TODO this and write tests
 // readRawPacket scans a raw packet. Packet size is assumed to be the WiFly
 // maximum of 1460.
@@ -136,27 +121,17 @@ func (s *rawScanner) readRawPacket(rawPackets chan<- []byte) {
 	rawPackets <- b
 }
 
-func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []byte) {
-	// Make the channels and set the return channels, this allows us to use the
-	// full value of the channels but return read only channels.
-	packets := make(chan []byte, 500)
-	rawPackets = packets
-
-	responses := make(chan []byte, 500)
-	responseLines = responses
+func Prefilter(in io.Reader, out chan<- []byte) {
 
 	go func() {
 		log.Debug("Prefilter has begun scanning input")
 		s := newRawScanner(in)
-		// TODO, should they be declared outside?
+		// TODO should they be declared outside?
 		for {
 			// Check if it might be an escape sequence
 			found, token := s.checkDelimiter()
 			if found {
 				switch token {
-				case COMM_TOKEN:
-					log.Printf("Prefilter command sequence detected")
-					s.readCommandLines(responses)
 				case PACK_TOKEN:
 					log.Printf("Packet UDP command sequence detected")
 					s.readRawPacket(packets)
@@ -166,6 +141,4 @@ func Prefilter(in io.Reader) (rawPackets <-chan []byte, responseLines <-chan []b
 			}
 		}
 	}()
-
-	return
 }

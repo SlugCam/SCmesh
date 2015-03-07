@@ -2,8 +2,6 @@ package constants
 
 import "time"
 
-const RAW_PACKET_SIZE = 1460
-
 // Constants for the delimiter sequences for the parser. IMPORTANT, PACK_SEQ and
 // COMM_SEQ need to be the same length and must both begin with the letter 'C'.
 // If this requirement needs to change then prefilter.checkEscape() will have to
