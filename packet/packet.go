@@ -4,38 +4,129 @@
 package packet
 
 import (
-	"errors"
+	"encoding/binary"
 	"log"
 
-	"github.com/SlugCam/SCmesh/constants"
+	"github.com/SlugCam/SCmesh/packet/crypto"
+	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/golang/protobuf/proto"
 )
 
-const RAW_PACKET_SIZE = 1460
-const DELIMITER = "CBU\r\n"
+const MAX_PACKET_LEN = 1460
 
-type Packet struct {
-	Payload []byte // Should contain the encrypted data for the packet
+type RawPacket struct {
+	Preheader []byte // Ascii85 Encoded Plaintext
+	Header    []byte // Ascii85 Encoded Encrypted Serialized Header Object
+	Payload   []byte // Encoded encrypted payload
 }
 
-func (p *Packet) WireFormat() []byte {
-	b := make([]byte, 0, 1460)
-	b = append(b, constants.PACK_SEQ...)
-	b = append(b, p.Payload...)
-	remainingLen := constants.RAW_PACKET_SIZE - len(b)
-	if remainingLen >= 0 {
-		b = append(b, make([]byte, remainingLen)...)
-	} else {
-		log.Panic(errors.New("Payload too large"))
+type Preheader struct {
+	Receiver      uint16
+	PayloadOffset uint32
+}
+
+type Packet struct {
+	Preheader Preheader
+	Header    *header.Header
+	Payload   []byte // Encoded encrypted payload
+}
+
+// serializePreheader provides serialization of the packet preheader.
+func (p *Preheader) Serialize() []byte {
+	out := make([]byte, 0, 6)
+	receiver := make([]byte, 2)
+	offset := make([]byte, 4)
+	binary.LittleEndian.PutUint16(receiver, p.Receiver)
+	binary.LittleEndian.PutUint32(offset, p.PayloadOffset)
+	out = append(out, receiver...)
+	out = append(out, offset...)
+	return out
+}
+
+// Pack takes a single packet and encodes it to the wire format. It will
+// fragment the data if necessary.
+func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
+
+	originalOffset := int(p.Preheader.PayloadOffset)
+	payloadLen := len(p.Payload)
+	relativeOffset := 0
+	var nextOffset int
+
+	serializedHeader, err := proto.Marshal(p.Header) // Will remain the same for all packets
+	if err != nil {
+		log.Fatal("marshaling error: ", err)
 	}
-	return b
+	maxHeaderLen := encrypter.MaxEncryptedLength(serializedHeader)
+
+	for nextOffset != payloadLen {
+
+		b := make([]byte, 0, MAX_PACKET_LEN)
+
+		// Preheader
+		newPreheader := p.Preheader // Will make a copy of the preheader
+		newPreheader.PayloadOffset = uint32(originalOffset + relativeOffset)
+		serializedPreheader := newPreheader.Serialize()
+		encodedPreheader := crypto.Encode(serializedPreheader)
+
+		// Fit Payload
+		// Remaining length could be calculated outside of loop
+		remainingPacketLen := MAX_PACKET_LEN
+		remainingPacketLen = remainingPacketLen - encrypter.NonceSize()
+		remainingPacketLen = remainingPacketLen - 4 // Delimiters
+		remainingPacketLen = remainingPacketLen - len(encodedPreheader)
+		remainingPacketLen = remainingPacketLen - maxHeaderLen
+
+		remainingPayloadLen := payloadLen - relativeOffset
+
+		if remainingPacketLen < remainingPayloadLen {
+			// We have less room in the packet than we need
+			nextOffset = relativeOffset + remainingPacketLen
+		} else {
+			// We can fit the rest of the packet
+			nextOffset = payloadLen
+		}
+
+		payloadSlice := p.Payload[relativeOffset:nextOffset]
+		relativeOffset = nextOffset
+
+		// Encrypt Header
+		encryptedHeader, nonce := encrypter.HeaderToWireFormat(serializedPreheader, serializedHeader, payloadSlice)
+
+		// Build packet
+		b = append(b, '\x01') // Packet delimiter
+		b = append(b, nonce...)
+		b = append(b, encodedPreheader...)
+		b = append(b, '\x00') // Section delimiter
+		b = append(b, encryptedHeader...)
+		b = append(b, '\x00') // Section delimiter
+		b = append(b, payloadSlice...)
+		b = append(b, '\x04') // Section delimiter
+	}
+}
+
+func ParsePacket(rawPacket RawPacket) Packet {
+
+	// Unencode preheader
+
+	// Parse preheader
+
+	// If receiver is incorrect we can drop (or continue if peeking is desired)
+
+	// Unseal header with preheader 0x00 payload as authenticated data
+
+	// If operation fails drop packet
+
+	// Parse header with protobuffer
+	return Packet{}
+
 }
 
 // ParsePackets is intended to be used in the main SCmesh pipeline to parse raw
 // packets provided from the in channel and push them to the out channel.
-func ParsePackets(in <-chan []byte, out chan<- packet.Packet) {
+func ParsePackets(in <-chan RawPacket, out chan<- Packet) {
 	go func() {
 		for c := range in {
-			out <- packet.ParsePacket(c)
+			out <- ParsePacket(c)
 		}
 	}()
 }
@@ -43,9 +134,10 @@ func ParsePackets(in <-chan []byte, out chan<- packet.Packet) {
 // PackPackets is intended to be used in the main SCmesh pipeline to pack
 // packets provided from the in channel and push them to the out channel.
 func PackPackets(in <-chan Packet, out chan<- []byte) {
+	encrypter := crypto.NewEncrypter("/slugcam/key") // Should only be used by one goroutine at a time
 	go func() {
-		for p := range routingOutCh {
-			packedPackets <- p.ToWireFormat()
+		for p := range in {
+			p.Pack(encrypter, out)
 		}
 	}()
 }
