@@ -1,7 +1,7 @@
 package header;
 
 message Header {
-    required string receiver = 1;
+    required int32 type = 1;
 
     message RouteRequest {
         required string destination = 1;

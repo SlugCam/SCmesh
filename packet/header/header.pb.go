@@ -21,7 +21,7 @@ var _ = proto.Marshal
 var _ = math.Inf
 
 type Header struct {
-	Receiver         *string                `protobuf:"bytes,1,req,name=receiver" json:"receiver,omitempty"`
+	Type             *int32                 `protobuf:"varint,1,req,name=type" json:"type,omitempty"`
 	RouteRequest     []*Header_RouteRequest `protobuf:"bytes,2,rep,name=route_request" json:"route_request,omitempty"`
 	XXX_unrecognized []byte                 `json:"-"`
 }
@@ -30,11 +30,11 @@ func (m *Header) Reset()         { *m = Header{} }
 func (m *Header) String() string { return proto.CompactTextString(m) }
 func (*Header) ProtoMessage()    {}
 
-func (m *Header) GetReceiver() string {
-	if m != nil && m.Receiver != nil {
-		return *m.Receiver
+func (m *Header) GetType() int32 {
+	if m != nil && m.Type != nil {
+		return *m.Type
 	}
-	return ""
+	return 0
 }
 
 func (m *Header) GetRouteRequest() []*Header_RouteRequest {

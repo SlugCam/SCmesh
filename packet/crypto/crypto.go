@@ -45,8 +45,9 @@ func (c *Encrypter) HeaderToWireFormat(preheader, header, payload []byte) (data 
 	toAuth = append(toAuth, payload...)
 
 	// Note, this will panic on incorrect nonce length
-	c.gcm.Seal(encrypted, nonce, header, toAuth)
+	encrypted = c.gcm.Seal(encrypted, nonce, header, toAuth)
 
+	log.Println("HeaderToWireFormat encrypted:", encrypted)
 	data = Encode(encrypted)
 
 	return

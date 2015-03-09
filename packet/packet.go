@@ -58,8 +58,7 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 	}
 	maxHeaderLen := encrypter.MaxEncryptedLength(serializedHeader)
 
-	for nextOffset != payloadLen {
-
+	for {
 		b := make([]byte, 0, MAX_PACKET_LEN)
 
 		// Preheader
@@ -92,6 +91,8 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 		// Encrypt Header
 		encryptedHeader, nonce := encrypter.HeaderToWireFormat(serializedPreheader, serializedHeader, payloadSlice)
 
+		//log.Println("Encrypted header:", encryptedHeader)
+
 		// Build packet
 		b = append(b, '\x01') // Packet delimiter
 		b = append(b, nonce...)
@@ -101,6 +102,12 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 		b = append(b, '\x00') // Section delimiter
 		b = append(b, payloadSlice...)
 		b = append(b, '\x04') // Section delimiter
+
+		out <- b
+
+		if nextOffset == payloadLen {
+			break
+		}
 	}
 }
 
