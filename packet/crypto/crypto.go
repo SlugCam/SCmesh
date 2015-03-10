@@ -17,8 +17,11 @@ type Encrypter struct {
 func (c *Encrypter) NonceSize() int {
 	return c.gcm.NonceSize()
 }
-func (c *Encrypter) MaxEncryptedLength(in []byte) int {
-	return ascii85.MaxEncodedLen(len(in) + c.gcm.Overhead())
+func (c *Encrypter) MaxEncryptedLen(in int) int {
+	return ascii85.MaxEncodedLen(in + c.gcm.Overhead())
+}
+func (c *Encrypter) MaxEncodedLen(in int) int {
+	return ascii85.MaxEncodedLen(in)
 }
 
 // TODO change nonce method
@@ -47,7 +50,6 @@ func (c *Encrypter) HeaderToWireFormat(preheader, header, payload []byte) (data 
 	// Note, this will panic on incorrect nonce length
 	encrypted = c.gcm.Seal(encrypted, nonce, header, toAuth)
 
-	log.Println("HeaderToWireFormat encrypted:", encrypted)
 	data = Encode(encrypted)
 
 	return

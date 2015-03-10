@@ -8,6 +8,4 @@ message Header {
     }
 
     repeated RouteRequest route_request = 2;
-    
-
 }

@@ -12,7 +12,10 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-const MAX_PACKET_LEN = 1460
+const (
+	MAX_PACKET_LEN            = 1460
+	SERIALIZED_PREHEADER_SIZE = 6
+)
 
 type RawPacket struct {
 	Preheader []byte // Ascii85 Encoded Plaintext
@@ -56,7 +59,11 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 	if err != nil {
 		log.Fatal("marshaling error: ", err)
 	}
-	maxHeaderLen := encrypter.MaxEncryptedLength(serializedHeader)
+
+	maxHeaderSize := encrypter.MaxEncryptedLen(len(serializedHeader))
+	maxPreheaderSize := encrypter.MaxEncodedLen(encrypter.NonceSize() + SERIALIZED_PREHEADER_SIZE)
+	delimiterSize := 4
+	maxPayloadSize := MAX_PACKET_LEN - delimiterSize - maxHeaderSize - maxPreheaderSize
 
 	for {
 		b := make([]byte, 0, MAX_PACKET_LEN)
@@ -65,21 +72,12 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 		newPreheader := p.Preheader // Will make a copy of the preheader
 		newPreheader.PayloadOffset = uint32(originalOffset + relativeOffset)
 		serializedPreheader := newPreheader.Serialize()
-		encodedPreheader := crypto.Encode(serializedPreheader)
 
 		// Fit Payload
-		// Remaining length could be calculated outside of loop
-		remainingPacketLen := MAX_PACKET_LEN
-		remainingPacketLen = remainingPacketLen - encrypter.NonceSize()
-		remainingPacketLen = remainingPacketLen - 4 // Delimiters
-		remainingPacketLen = remainingPacketLen - len(encodedPreheader)
-		remainingPacketLen = remainingPacketLen - maxHeaderLen
-
 		remainingPayloadLen := payloadLen - relativeOffset
-
-		if remainingPacketLen < remainingPayloadLen {
+		if maxPayloadSize < remainingPayloadLen {
 			// We have less room in the packet than we need
-			nextOffset = relativeOffset + remainingPacketLen
+			nextOffset = relativeOffset + maxPayloadSize
 		} else {
 			// We can fit the rest of the packet
 			nextOffset = payloadLen
@@ -88,14 +86,13 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 		payloadSlice := p.Payload[relativeOffset:nextOffset]
 		relativeOffset = nextOffset
 
-		// Encrypt Header
+		// Encrypt and encode headers
 		encryptedHeader, nonce := encrypter.HeaderToWireFormat(serializedPreheader, serializedHeader, payloadSlice)
-
-		//log.Println("Encrypted header:", encryptedHeader)
+		noncePreheader := append(nonce, serializedPreheader...)
+		encodedPreheader := crypto.Encode(noncePreheader)
 
 		// Build packet
 		b = append(b, '\x01') // Packet delimiter
-		b = append(b, nonce...)
 		b = append(b, encodedPreheader...)
 		b = append(b, '\x00') // Section delimiter
 		b = append(b, encryptedHeader...)
