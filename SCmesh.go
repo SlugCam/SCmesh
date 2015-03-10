@@ -1,20 +1,21 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"io"
 
-	"net"
-	"strconv"
-	"strings"
+	"sync"
 
-	log "github.com/Sirupsen/logrus" // A replacement for the stdlib log
+	log "github.com/Sirupsen/logrus"
+	"github.com/SlugCam/SCmesh/packet"
+	"github.com/SlugCam/SCmesh/prefilter"
+	"github.com/SlugCam/SCmesh/routing"
+	"github.com/tarm/goserial" // A replacement for the stdlib log
 )
 
 func main() {
 	log.SetLevel(log.DebugLevel)
-	port := flag.Int("port", 8080, "the port on which to listen for control messages")
+	_ = flag.Int("port", 8080, "the port on which to listen for control messages")
 	// program := flag.String("program", "SCcomm", "the program to run")
 	flag.Parse()
 
@@ -36,21 +37,22 @@ func startPipeline() {
 	}
 
 	// Make channels
-	rawPackets := make(chan []byte)
+	rawPackets := make(chan packet.RawPacket)
 	toRouter := make(chan packet.Packet)
 	destLocal := make(chan packet.Packet)
 	fromRouter := make(chan packet.Packet)
+	packedPackets := make(chan []byte)
 
 	// Setup pipeline
 	prefilter.Prefilter(serial, rawPackets)
 
 	packet.ParsePackets(rawPackets, toRouter)
 
-	local.ProcessPackets(destLocal, toRouter)
+	//local.ProcessPackets(destLocal, toRouter)
 
 	routing.RoutePackets(toRouter, destLocal, fromRouter)
 
-	packet.PackPackets(fromRouter, packetPackets)
+	packet.PackPackets(fromRouter, packedPackets)
 
 	writePackets(packedPackets, serial)
 }
