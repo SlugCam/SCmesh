@@ -40,6 +40,7 @@ type Packet struct {
 func NewPacket() *Packet {
 	p := new(Packet)
 	p.Header = new(header.Header)
+	return p
 }
 
 // serializePreheader provides serialization of the packet preheader.
