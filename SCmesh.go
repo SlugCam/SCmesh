@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 
 	"sync"
@@ -9,7 +10,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/prefilter"
-	"github.com/SlugCam/SCmesh/routing"
 	"github.com/tarm/goserial" // A replacement for the stdlib log
 )
 
@@ -39,7 +39,7 @@ func startPipeline() {
 	// Make channels
 	rawPackets := make(chan packet.RawPacket)
 	toRouter := make(chan packet.Packet)
-	destLocal := make(chan packet.Packet)
+	//	destLocal := make(chan packet.Packet)
 	fromRouter := make(chan packet.Packet)
 	packedPackets := make(chan []byte)
 
@@ -50,11 +50,23 @@ func startPipeline() {
 
 	//local.ProcessPackets(destLocal, toRouter)
 
-	routing.RoutePackets(toRouter, destLocal, fromRouter)
+	//routing.RoutePackets(toRouter, destLocal, fromRouter)
 
 	packet.PackPackets(fromRouter, packedPackets)
 
 	writePackets(packedPackets, serial)
+
+	go func() {
+		// print incoming
+		for c := range toRouter {
+			fmt.Println(string(c.Payload))
+		}
+	}()
+
+	go func() {
+		// send outgoing
+
+	}()
 }
 
 func writePackets(in <-chan []byte, out io.Writer) {
