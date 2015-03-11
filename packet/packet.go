@@ -110,6 +110,7 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 		b = append(b, '\x04') // Section delimiter
 
 		out <- b
+		log.Debug("Sending this raw packet:", b)
 
 		if nextOffset == payloadLen {
 			break
@@ -120,6 +121,7 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 func (raw *RawPacket) Parse(crypter *crypto.Encrypter) (pack Packet, err error) {
 	// Copy reference to payload
 	pack.Payload = raw.Payload
+	log.Debug("Parsing this raw packet:", raw)
 
 	// Decode preheader
 	decodedPreheader, err := crypto.Decode(raw.Preheader)
@@ -127,8 +129,9 @@ func (raw *RawPacket) Parse(crypter *crypto.Encrypter) (pack Packet, err error) 
 		return
 	}
 	// Parse preheader
+	log.Debug("Decoded preheader is:", decodedPreheader)
 	if len(decodedPreheader) != SERIALIZED_PREHEADER_SIZE+NONCE_LENGTH {
-		err = errors.New("Incorrect preheader length")
+		err = errors.New("incorrect preheader length")
 		return
 	}
 	nonce := decodedPreheader[0:12]

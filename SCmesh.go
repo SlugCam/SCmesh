@@ -11,6 +11,7 @@ import (
 	"github.com/SlugCam/SCmesh/local"
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/prefilter"
+	"github.com/SlugCam/SCmesh/routing"
 	"github.com/tarm/goserial" // A replacement for the stdlib log
 )
 
@@ -49,9 +50,10 @@ func startPipeline() {
 
 	packet.ParsePackets(rawPackets, toRouter)
 
-	local.LocalProcessing(destLocal, toRouter)
+	//local.LocalProcessing(destLocal, toRouter) // Should be
+	local.LocalProcessing(destLocal, fromRouter)
 
-	//routing.RoutePackets(toRouter, destLocal, fromRouter)
+	routing.RoutePackets(toRouter, destLocal, fromRouter)
 
 	packet.PackPackets(fromRouter, packedPackets)
 

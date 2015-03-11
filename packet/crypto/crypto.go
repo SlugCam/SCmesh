@@ -13,10 +13,11 @@ import (
 // Decode decodes a byte slice into a new byte slice.
 // TODO should check nsrc?
 func Decode(in []byte) (decoded []byte, err error) {
-	decoded = make([]byte, len(in))
+	decoded = make([]byte, 4*len(in))
 	// TODO should check nsrc?
 	ndst, _, err := ascii85.Decode(decoded, in, true)
 	decoded = decoded[0:ndst]
+	log.Debug("ndst:", ndst)
 	return
 }
 
