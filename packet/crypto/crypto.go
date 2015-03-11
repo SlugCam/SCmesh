@@ -7,11 +7,53 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/ascii85"
-	"log"
+	log "github.com/Sirupsen/logrus"
 )
+
+// Decode decodes a byte slice into a new byte slice.
+// TODO should check nsrc?
+func Decode(in []byte) (decoded []byte, err error) {
+	decoded = make([]byte, len(in))
+	// TODO should check nsrc?
+	ndst, _, err := ascii85.Decode(decoded, in, true)
+	decoded = decoded[0:ndst]
+	return
+}
+
+// Encode is a encodes a byte slice into a new byte slice.
+func Encode(in []byte) []byte {
+	maxLength := ascii85.MaxEncodedLen(len(in))
+	encoded := make([]byte, maxLength)
+	n := ascii85.Encode(encoded, in)
+	encoded = encoded[0:n]
+	return encoded
+}
 
 type Encrypter struct {
 	gcm cipher.AEAD
+}
+
+// TODO key should not be hardcoded
+func NewEncrypter(keyPath string) *Encrypter {
+
+	// TODO bad
+	_ = keyPath
+	key := []byte("This is my key!!")
+
+	aes, err := aes.NewCipher(key)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	gcm, err := cipher.NewGCM(aes)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return &Encrypter{
+		gcm: gcm,
+	}
+
 }
 
 func (c *Encrypter) NonceSize() int {
@@ -40,7 +82,7 @@ func (c *Encrypter) getNonce() []byte {
 func (c *Encrypter) HeaderToWireFormat(preheader, header, payload []byte) (data []byte, nonce []byte) {
 	nonce = c.getNonce()
 
-	encrypted := make([]byte, 0, len(header)+c.gcm.Overhead())
+	//encrypted := make([]byte, 0, len(header)+c.gcm.Overhead())
 	toAuth := make([]byte, 0, len(preheader)+len(payload)+1)
 
 	toAuth = append(toAuth, preheader...)
@@ -48,40 +90,34 @@ func (c *Encrypter) HeaderToWireFormat(preheader, header, payload []byte) (data 
 	toAuth = append(toAuth, payload...)
 
 	// Note, this will panic on incorrect nonce length
-	encrypted = c.gcm.Seal(encrypted, nonce, header, toAuth)
+	log.Debugf("Seal(nil, %v, %v, %v)", nonce, header, toAuth)
+	encrypted := c.gcm.Seal(nil, nonce, header, toAuth)
 
 	data = Encode(encrypted)
 
 	return
 }
 
-// encode is a encodes a byte slice into a new byte slice.
-func Encode(in []byte) []byte {
-	maxLength := ascii85.MaxEncodedLen(len(in))
-	encoded := make([]byte, maxLength)
-	n := ascii85.Encode(encoded, in)
-	encoded = encoded[0:n]
-	return encoded
-}
+// Seal wraps the AEAD Seal function for our needs. It returns a new slice with
+// the encrypted data (it does not overwrite any supplied buffer). It also
+// generates and returns the nonce used.
+func (c *Encrypter) HeaderFromWireFormat(nonce, preheader, header, payload []byte) (data []byte, err error) {
 
-// TODO key should not be hardcoded
-func NewEncrypter(keyPath string) *Encrypter {
-	// TODO bad
-	_ = keyPath
-	key := []byte("This is my key!!")
-
-	aesCipher, err := aes.NewCipher(key)
+	decoded, err := Decode(header)
 	if err != nil {
-		log.Panic(err)
+		return
 	}
 
-	gcmCipher, err := cipher.NewGCM(aesCipher)
-	if err != nil {
-		log.Panic(err)
-	}
+	//decrypted := make([]byte, 0, len(header))
+	toAuth := make([]byte, 0, len(preheader)+len(payload)+1)
 
-	return &Encrypter{
-		gcm: gcmCipher,
-	}
+	toAuth = append(toAuth, preheader...)
+	toAuth = append(toAuth, '\x00')
+	toAuth = append(toAuth, payload...)
 
+	// Note, this will panic on incorrect nonce length
+	log.Debugf("Open(nil, %v, %v, %v)", nonce, header, toAuth)
+	data, err = c.gcm.Open(nil, nonce, decoded, toAuth)
+
+	return
 }

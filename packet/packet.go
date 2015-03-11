@@ -5,7 +5,9 @@ package packet
 
 import (
 	"encoding/binary"
-	"log"
+	"errors"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/SlugCam/SCmesh/packet/crypto"
 	"github.com/SlugCam/SCmesh/packet/header"
@@ -15,6 +17,7 @@ import (
 const (
 	MAX_PACKET_LEN            = 1460
 	SERIALIZED_PREHEADER_SIZE = 6
+	NONCE_LENGTH              = 12
 )
 
 type RawPacket struct {
@@ -108,29 +111,51 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 	}
 }
 
-func ParsePacket(rawPacket RawPacket) Packet {
+func (raw *RawPacket) Parse(crypter *crypto.Encrypter) (pack Packet, err error) {
+	// Copy reference to payload
+	pack.Payload = raw.Payload
 
-	// Unencode preheader
-
+	// Decode preheader
+	decodedPreheader, err := crypto.Decode(raw.Preheader)
+	if err != nil {
+		return
+	}
 	// Parse preheader
+	if len(decodedPreheader) != SERIALIZED_PREHEADER_SIZE+NONCE_LENGTH {
+		err = errors.New("Incorrect preheader length")
+		return
+	}
+	nonce := decodedPreheader[0:12]
+	pack.Preheader.Receiver = binary.LittleEndian.Uint16(decodedPreheader[12:14])
+	pack.Preheader.PayloadOffset = binary.LittleEndian.Uint32(decodedPreheader[14:18])
 
-	// If receiver is incorrect we can drop (or continue if peeking is desired)
+	// TODO If receiver is incorrect we can drop (or continue if peeking is desired)
 
 	// Unseal header with preheader 0x00 payload as authenticated data
-
-	// If operation fails drop packet
+	serializedHeader, err := crypter.HeaderFromWireFormat(nonce, decodedPreheader[12:18], raw.Header, raw.Payload)
+	if err != nil {
+		return
+	}
 
 	// Parse header with protobuffer
-	return Packet{}
+	pack.Header = &header.Header{}
+	err = proto.Unmarshal(serializedHeader, pack.Header)
 
+	return
 }
 
 // ParsePackets is intended to be used in the main SCmesh pipeline to parse raw
 // packets provided from the in channel and push them to the out channel.
 func ParsePackets(in <-chan RawPacket, out chan<- Packet) {
+	encrypter := crypto.NewEncrypter("/slugcam/key") // Should only be used by one goroutine at a time
 	go func() {
 		for c := range in {
-			out <- ParsePacket(c)
+			p, err := c.Parse(encrypter)
+			if err != nil {
+				log.Error("Packet dropped during parsing.", err)
+			} else {
+				out <- p
+			}
 		}
 	}()
 }

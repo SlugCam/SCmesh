@@ -59,6 +59,7 @@ func (s *scanner) readUntil(delim byte) (data []byte, err error) {
 	return
 }
 
+// TODO discard packet if MAX_PACKET_LEN reached!!!
 func (s *scanner) readRawPacket() (p packet.RawPacket, err error) {
 	preheader, err := s.readUntil('\x00')
 	if err != nil {
