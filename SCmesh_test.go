@@ -17,9 +17,8 @@ import (
 func TestDecodingEncoding(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	// Build a packet
-	p := new(packet.Packet)
+	p := packet.NewPacket()
 	p.Preheader.Receiver = uint16(3)
-	p.Header = new(header.Header)
 	p.Header.Type = proto.Int32(0)
 	p.Payload = []byte("Hello world!")
 	log.Printf("Original: %+v\n", p)

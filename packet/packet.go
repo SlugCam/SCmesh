@@ -37,6 +37,11 @@ type Packet struct {
 	Payload   []byte // Encoded encrypted payload
 }
 
+func NewPacket() *Packet {
+	p := new(Packet)
+	p.Header = new(header.Header)
+}
+
 // serializePreheader provides serialization of the packet preheader.
 func (p *Preheader) Serialize() []byte {
 	out := make([]byte, 0, 6)
