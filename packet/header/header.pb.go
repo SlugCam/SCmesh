@@ -23,12 +23,213 @@ var _ = proto.Marshal
 var _ = math.Inf
 
 type DSROptions struct {
-	XXX_unrecognized []byte `json:"-"`
+	RouteRequest          *DSROptions_RouteRequest           `protobuf:"bytes,1,opt,name=route_request" json:"route_request,omitempty"`
+	RouteReplies          []*DSROptions_RouteReply           `protobuf:"bytes,2,rep,name=route_replies" json:"route_replies,omitempty"`
+	NodeUnreachableErrors []*DSROptions_NodeUnreachableError `protobuf:"bytes,3,rep,name=node_unreachable_errors" json:"node_unreachable_errors,omitempty"`
+	AckRequest            *DSROptions_AckRequest             `protobuf:"bytes,4,opt,name=ack_request" json:"ack_request,omitempty"`
+	Ack                   []*DSROptions_Ack                  `protobuf:"bytes,5,rep,name=ack" json:"ack,omitempty"`
+	XXX_unrecognized      []byte                             `json:"-"`
 }
 
 func (m *DSROptions) Reset()         { *m = DSROptions{} }
 func (m *DSROptions) String() string { return proto.CompactTextString(m) }
 func (*DSROptions) ProtoMessage()    {}
+
+func (m *DSROptions) GetRouteRequest() *DSROptions_RouteRequest {
+	if m != nil {
+		return m.RouteRequest
+	}
+	return nil
+}
+
+func (m *DSROptions) GetRouteReplies() []*DSROptions_RouteReply {
+	if m != nil {
+		return m.RouteReplies
+	}
+	return nil
+}
+
+func (m *DSROptions) GetNodeUnreachableErrors() []*DSROptions_NodeUnreachableError {
+	if m != nil {
+		return m.NodeUnreachableErrors
+	}
+	return nil
+}
+
+func (m *DSROptions) GetAckRequest() *DSROptions_AckRequest {
+	if m != nil {
+		return m.AckRequest
+	}
+	return nil
+}
+
+func (m *DSROptions) GetAck() []*DSROptions_Ack {
+	if m != nil {
+		return m.Ack
+	}
+	return nil
+}
+
+// If route request sent, receiver must be broadcast and source must be
+// originating node, TTL can be used
+type DSROptions_RouteRequest struct {
+	Id               *uint32  `protobuf:"varint,1,req,name=id" json:"id,omitempty"`
+	Target           *uint32  `protobuf:"varint,2,req,name=target" json:"target,omitempty"`
+	Addresses        []uint32 `protobuf:"varint,3,rep,packed,name=addresses" json:"addresses,omitempty"`
+	XXX_unrecognized []byte   `json:"-"`
+}
+
+func (m *DSROptions_RouteRequest) Reset()         { *m = DSROptions_RouteRequest{} }
+func (m *DSROptions_RouteRequest) String() string { return proto.CompactTextString(m) }
+func (*DSROptions_RouteRequest) ProtoMessage()    {}
+
+func (m *DSROptions_RouteRequest) GetId() uint32 {
+	if m != nil && m.Id != nil {
+		return *m.Id
+	}
+	return 0
+}
+
+func (m *DSROptions_RouteRequest) GetTarget() uint32 {
+	if m != nil && m.Target != nil {
+		return *m.Target
+	}
+	return 0
+}
+
+func (m *DSROptions_RouteRequest) GetAddresses() []uint32 {
+	if m != nil {
+		return m.Addresses
+	}
+	return nil
+}
+
+// Source will be set to the node originating the reply
+// Destination will be the node who originated the request
+type DSROptions_RouteReply struct {
+	Addresses        []uint32 `protobuf:"varint,1,rep,packed,name=addresses" json:"addresses,omitempty"`
+	XXX_unrecognized []byte   `json:"-"`
+}
+
+func (m *DSROptions_RouteReply) Reset()         { *m = DSROptions_RouteReply{} }
+func (m *DSROptions_RouteReply) String() string { return proto.CompactTextString(m) }
+func (*DSROptions_RouteReply) ProtoMessage()    {}
+
+func (m *DSROptions_RouteReply) GetAddresses() []uint32 {
+	if m != nil {
+		return m.Addresses
+	}
+	return nil
+}
+
+//
+// message RouteError {
+// enum ErrorType {
+// NODE_UNREACHABLE = 1;
+// //FLOW_STATE_NOT_SUPPORTED = 2;
+// //OPTION_NOT_SUPPORTED = 3;
+// }
+// required ErrorType error_type = 1;
+// required uint32 salvage = 2;
+// required uint32 error_source = 3; // Node that discovered the link error.
+// required uint32 error_destination = 4; // Node to which error must be delivered.
+//
+// }
+type DSROptions_NodeUnreachableError struct {
+	Salvage                *uint32 `protobuf:"varint,1,req,name=salvage" json:"salvage,omitempty"`
+	Source                 *uint32 `protobuf:"varint,2,req,name=source" json:"source,omitempty"`
+	Destination            *uint32 `protobuf:"varint,3,req,name=destination" json:"destination,omitempty"`
+	UnreachableNodeAddress *uint32 `protobuf:"varint,4,req,name=unreachable_node_address" json:"unreachable_node_address,omitempty"`
+	XXX_unrecognized       []byte  `json:"-"`
+}
+
+func (m *DSROptions_NodeUnreachableError) Reset()         { *m = DSROptions_NodeUnreachableError{} }
+func (m *DSROptions_NodeUnreachableError) String() string { return proto.CompactTextString(m) }
+func (*DSROptions_NodeUnreachableError) ProtoMessage()    {}
+
+func (m *DSROptions_NodeUnreachableError) GetSalvage() uint32 {
+	if m != nil && m.Salvage != nil {
+		return *m.Salvage
+	}
+	return 0
+}
+
+func (m *DSROptions_NodeUnreachableError) GetSource() uint32 {
+	if m != nil && m.Source != nil {
+		return *m.Source
+	}
+	return 0
+}
+
+func (m *DSROptions_NodeUnreachableError) GetDestination() uint32 {
+	if m != nil && m.Destination != nil {
+		return *m.Destination
+	}
+	return 0
+}
+
+func (m *DSROptions_NodeUnreachableError) GetUnreachableNodeAddress() uint32 {
+	if m != nil && m.UnreachableNodeAddress != nil {
+		return *m.UnreachableNodeAddress
+	}
+	return 0
+}
+
+type DSROptions_AckRequest struct {
+	Identification   *uint32 `protobuf:"varint,1,req,name=identification" json:"identification,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *DSROptions_AckRequest) Reset()         { *m = DSROptions_AckRequest{} }
+func (m *DSROptions_AckRequest) String() string { return proto.CompactTextString(m) }
+func (*DSROptions_AckRequest) ProtoMessage()    {}
+
+func (m *DSROptions_AckRequest) GetIdentification() uint32 {
+	if m != nil && m.Identification != nil {
+		return *m.Identification
+	}
+	return 0
+}
+
+type DSROptions_Ack struct {
+	Identification   *uint32 `protobuf:"varint,1,req,name=identification" json:"identification,omitempty"`
+	Source           *uint32 `protobuf:"varint,2,req,name=source" json:"source,omitempty"`
+	Destination      *uint32 `protobuf:"varint,3,req,name=destination" json:"destination,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *DSROptions_Ack) Reset()         { *m = DSROptions_Ack{} }
+func (m *DSROptions_Ack) String() string { return proto.CompactTextString(m) }
+func (*DSROptions_Ack) ProtoMessage()    {}
+
+func (m *DSROptions_Ack) GetIdentification() uint32 {
+	if m != nil && m.Identification != nil {
+		return *m.Identification
+	}
+	return 0
+}
+
+func (m *DSROptions_Ack) GetSource() uint32 {
+	if m != nil && m.Source != nil {
+		return *m.Source
+	}
+	return 0
+}
+
+func (m *DSROptions_Ack) GetDestination() uint32 {
+	if m != nil && m.Destination != nil {
+		return *m.Destination
+	}
+	return 0
+}
+
+type DSROptions_SourceRoute struct {
+	XXX_unrecognized []byte `json:"-"`
+}
+
+func (m *DSROptions_SourceRoute) Reset()         { *m = DSROptions_SourceRoute{} }
+func (m *DSROptions_SourceRoute) String() string { return proto.CompactTextString(m) }
+func (*DSROptions_SourceRoute) ProtoMessage()    {}
 
 type FloodingOptions struct {
 	XXX_unrecognized []byte `json:"-"`
@@ -39,14 +240,62 @@ func (m *FloodingOptions) String() string { return proto.CompactTextString(m) }
 func (*FloodingOptions) ProtoMessage()    {}
 
 type Header struct {
-	DsrOptions       *DSROptions      `protobuf:"bytes,2,opt,name=dsr_options" json:"dsr_options,omitempty"`
-	FloodingOptions  *FloodingOptions `protobuf:"bytes,3,opt,name=flooding_options" json:"flooding_options,omitempty"`
+	Source           *uint32          `protobuf:"varint,1,req" json:"Source,omitempty"`
+	SequenceNumber   *uint32          `protobuf:"varint,2,opt" json:"SequenceNumber,omitempty"`
+	Receiver         *uint32          `protobuf:"varint,3,opt" json:"Receiver,omitempty"`
+	Destination      *uint32          `protobuf:"varint,4,opt" json:"Destination,omitempty"`
+	PayloadOffset    *uint64          `protobuf:"varint,5,opt" json:"PayloadOffset,omitempty"`
+	TTL              *uint32          `protobuf:"varint,6,opt" json:"TTL,omitempty"`
+	DsrOptions       *DSROptions      `protobuf:"bytes,7,opt,name=dsr_options" json:"dsr_options,omitempty"`
+	FloodingOptions  *FloodingOptions `protobuf:"bytes,8,opt,name=flooding_options" json:"flooding_options,omitempty"`
 	XXX_unrecognized []byte           `json:"-"`
 }
 
 func (m *Header) Reset()         { *m = Header{} }
 func (m *Header) String() string { return proto.CompactTextString(m) }
 func (*Header) ProtoMessage()    {}
+
+func (m *Header) GetSource() uint32 {
+	if m != nil && m.Source != nil {
+		return *m.Source
+	}
+	return 0
+}
+
+func (m *Header) GetSequenceNumber() uint32 {
+	if m != nil && m.SequenceNumber != nil {
+		return *m.SequenceNumber
+	}
+	return 0
+}
+
+func (m *Header) GetReceiver() uint32 {
+	if m != nil && m.Receiver != nil {
+		return *m.Receiver
+	}
+	return 0
+}
+
+func (m *Header) GetDestination() uint32 {
+	if m != nil && m.Destination != nil {
+		return *m.Destination
+	}
+	return 0
+}
+
+func (m *Header) GetPayloadOffset() uint64 {
+	if m != nil && m.PayloadOffset != nil {
+		return *m.PayloadOffset
+	}
+	return 0
+}
+
+func (m *Header) GetTTL() uint32 {
+	if m != nil && m.TTL != nil {
+		return *m.TTL
+	}
+	return 0
+}
 
 func (m *Header) GetDsrOptions() *DSROptions {
 	if m != nil {
@@ -60,22 +309,6 @@ func (m *Header) GetFloodingOptions() *FloodingOptions {
 		return m.FloodingOptions
 	}
 	return nil
-}
-
-type Header_RouteRequest struct {
-	Destination      *string `protobuf:"bytes,1,req,name=destination" json:"destination,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
-}
-
-func (m *Header_RouteRequest) Reset()         { *m = Header_RouteRequest{} }
-func (m *Header_RouteRequest) String() string { return proto.CompactTextString(m) }
-func (*Header_RouteRequest) ProtoMessage()    {}
-
-func (m *Header_RouteRequest) GetDestination() string {
-	if m != nil && m.Destination != nil {
-		return *m.Destination
-	}
-	return ""
 }
 
 func init() {
