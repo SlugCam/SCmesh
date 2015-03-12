@@ -1,11 +1,52 @@
 package header;
 
-message Header {
-    required int32 type = 1;
-
+message DSROptions {
+    // If route request sent, receiver must be broadcast and source must be
+     // originating node, TTL can be used
     message RouteRequest {
-        required string destination = 1;
+        required uint32 id; // Unique for sourse and destination
+        required uint32 target;
+        repeated uint32 addresses; // ordered from initiator not including initiator
+    }
+    optional RouteRequest route_request = 1;
+
+    message RouteReply {
+
     }
 
-    repeated RouteRequest route_request = 2;
+    message RouteError {
+
+    }
+    message AckRequest {
+
+    }
+
+    message Ack {
+
+    }
+
+    message SourceRoute {
+
+    }
+}
+
+message FloodingOptions {
+
+}
+
+message Header {
+    required uint32 Source = 1
+        optional uint32 SequenceNumber = 2
+
+        optional uint32 Receiver = 3
+
+        optional uint32 Destination = 4
+        optional uint64 PayloadOffset = 5
+
+        optional uint32 TTL
+
+        oneof RoutingOptions {
+            DSROptions dsr_options = 6;
+            FloodingOptions flooding_options = 7;
+        }
 }

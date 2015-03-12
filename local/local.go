@@ -9,7 +9,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/proto"
 
 	"github.com/SlugCam/SCmesh/packet"
 )
@@ -18,7 +17,7 @@ func LocalProcessing(in chan<- packet.Packet, out chan<- packet.Packet) {
 	go func() {
 		for {
 			p := packet.NewPacket()
-			p.Header.Type = proto.Int32(1)
+			//p.Header.Type = proto.Int32(1)
 			p.Payload = []byte("Ping!!!")
 			out <- *p
 			time.Sleep(10 * time.Second)

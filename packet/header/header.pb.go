@@ -9,6 +9,8 @@ It is generated from these files:
 	header.proto
 
 It has these top-level messages:
+	DSROptions
+	FloodingOptions
 	Header
 */
 package header
@@ -20,26 +22,42 @@ import math "math"
 var _ = proto.Marshal
 var _ = math.Inf
 
+type DSROptions struct {
+	XXX_unrecognized []byte `json:"-"`
+}
+
+func (m *DSROptions) Reset()         { *m = DSROptions{} }
+func (m *DSROptions) String() string { return proto.CompactTextString(m) }
+func (*DSROptions) ProtoMessage()    {}
+
+type FloodingOptions struct {
+	XXX_unrecognized []byte `json:"-"`
+}
+
+func (m *FloodingOptions) Reset()         { *m = FloodingOptions{} }
+func (m *FloodingOptions) String() string { return proto.CompactTextString(m) }
+func (*FloodingOptions) ProtoMessage()    {}
+
 type Header struct {
-	Type             *int32                 `protobuf:"varint,1,req,name=type" json:"type,omitempty"`
-	RouteRequest     []*Header_RouteRequest `protobuf:"bytes,2,rep,name=route_request" json:"route_request,omitempty"`
-	XXX_unrecognized []byte                 `json:"-"`
+	DsrOptions       *DSROptions      `protobuf:"bytes,2,opt,name=dsr_options" json:"dsr_options,omitempty"`
+	FloodingOptions  *FloodingOptions `protobuf:"bytes,3,opt,name=flooding_options" json:"flooding_options,omitempty"`
+	XXX_unrecognized []byte           `json:"-"`
 }
 
 func (m *Header) Reset()         { *m = Header{} }
 func (m *Header) String() string { return proto.CompactTextString(m) }
 func (*Header) ProtoMessage()    {}
 
-func (m *Header) GetType() int32 {
-	if m != nil && m.Type != nil {
-		return *m.Type
+func (m *Header) GetDsrOptions() *DSROptions {
+	if m != nil {
+		return m.DsrOptions
 	}
-	return 0
+	return nil
 }
 
-func (m *Header) GetRouteRequest() []*Header_RouteRequest {
+func (m *Header) GetFloodingOptions() *FloodingOptions {
 	if m != nil {
-		return m.RouteRequest
+		return m.FloodingOptions
 	}
 	return nil
 }

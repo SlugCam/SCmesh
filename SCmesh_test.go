@@ -1,15 +1,14 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"testing"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/crypto"
-	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/SlugCam/SCmesh/prefilter"
 	"github.com/SlugCam/SCmesh/util"
-	"github.com/golang/protobuf/proto"
 )
 
 // TestDecodingEncoding is a functional test of the process of decoding and
@@ -19,7 +18,7 @@ func TestDecodingEncoding(t *testing.T) {
 	// Build a packet
 	p := packet.NewPacket()
 	p.Preheader.Receiver = uint16(3)
-	p.Header.Type = proto.Int32(0)
+	//p.Header.Type = proto.Int32(0)
 	p.Payload = []byte("Hello world!")
 	log.Printf("Original: %+v\n", p)
 
