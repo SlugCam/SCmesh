@@ -1,52 +1,73 @@
 package header;
 
-message DSROptions {
+message Header {
+    required uint32 source = 1;
+    optional uint32 destination = 7;
+    optional uint32 ttl = 2;
+    optional uint32 priority = 3;
+
+    oneof RoutingOptions {
+        DSRHeader dsr_header = 4;
+        FloodingHeader flooding_header = 5;
+    }
+
+    optional DataHeader data_header = 6;
+}
+
+message FloodingHeader {
+    required uint32 packet_id = 2;
+}
+
+message DataHeader {
+    required uint32 file_id = 1;
+    repeated uint32 destinations = 2 [packed=true];
+    //required uint32 
+}
+
+message DSRHeader {
     // If route request sent, receiver must be broadcast and source must be
-     // originating node, TTL can be used
+    // originating node, TTL can be used
     message RouteRequest {
-        required uint32 id; // Unique for sourse and destination
-        required uint32 target;
-        repeated uint32 addresses; // ordered from initiator not including initiator
+        required uint32 id = 1; // Unique for sourse and destination
+        required uint32 target = 2;
+        repeated uint32 addresses = 3 [packed=true]; // ordered from initiator not including initiator
     }
     optional RouteRequest route_request = 1;
 
+    // Source will be set to the node originating the reply
+    // Destination will be the node who originated the request
     message RouteReply {
-
+        repeated uint32 addresses = 1 [packed=true]; // ordered from initiator not including initiator
     }
+    repeated RouteReply route_replies = 2;
 
-    message RouteError {
-
+    // Did not implement other errors because we do not need
+    message NodeUnreachableError {
+        required uint32 salvage = 1;
+        required uint32 source = 2;
+        required uint32 destination = 3;
+        required uint32 unreachable_node_address = 4;
     }
+    repeated NodeUnreachableError node_unreachable_errors = 3;
+
     message AckRequest {
-
+        required uint32 identification = 1; 
     }
+    optional AckRequest ack_request = 4;
 
     message Ack {
-
+        required uint32 identification = 1; 
+        required uint32 source = 2; // node originating ack
+        required uint32 destination = 3;
     }
+    repeated Ack ack = 5;
 
     message SourceRoute {
-
+        required uint32 salvage = 1;
+        required uint32 segs_left = 2;
+        repeated uint32 addresses = 3 [packed=true]; // ordered from initiator not including initiator
     }
+    optional SourceRoute source_route = 6;
 }
 
-message FloodingOptions {
 
-}
-
-message Header {
-    required uint32 Source = 1
-        optional uint32 SequenceNumber = 2
-
-        optional uint32 Receiver = 3
-
-        optional uint32 Destination = 4
-        optional uint64 PayloadOffset = 5
-
-        optional uint32 TTL
-
-        oneof RoutingOptions {
-            DSROptions dsr_options = 6;
-            FloodingOptions flooding_options = 7;
-        }
-}

@@ -9,9 +9,10 @@ It is generated from these files:
 	header.proto
 
 It has these top-level messages:
-	DSROptions
-	FloodingOptions
 	Header
+	FloodingHeader
+	DataHeader
+	DSRHeader
 */
 package header
 
@@ -22,60 +23,337 @@ import math "math"
 var _ = proto.Marshal
 var _ = math.Inf
 
-type DSROptions struct {
-	XXX_unrecognized []byte `json:"-"`
-}
-
-func (m *DSROptions) Reset()         { *m = DSROptions{} }
-func (m *DSROptions) String() string { return proto.CompactTextString(m) }
-func (*DSROptions) ProtoMessage()    {}
-
-type FloodingOptions struct {
-	XXX_unrecognized []byte `json:"-"`
-}
-
-func (m *FloodingOptions) Reset()         { *m = FloodingOptions{} }
-func (m *FloodingOptions) String() string { return proto.CompactTextString(m) }
-func (*FloodingOptions) ProtoMessage()    {}
-
 type Header struct {
-	DsrOptions       *DSROptions      `protobuf:"bytes,2,opt,name=dsr_options" json:"dsr_options,omitempty"`
-	FloodingOptions  *FloodingOptions `protobuf:"bytes,3,opt,name=flooding_options" json:"flooding_options,omitempty"`
-	XXX_unrecognized []byte           `json:"-"`
+	Source           *uint32         `protobuf:"varint,1,req,name=source" json:"source,omitempty"`
+	Destination      *uint32         `protobuf:"varint,7,opt,name=destination" json:"destination,omitempty"`
+	Ttl              *uint32         `protobuf:"varint,2,opt,name=ttl" json:"ttl,omitempty"`
+	Priority         *uint32         `protobuf:"varint,3,opt,name=priority" json:"priority,omitempty"`
+	DsrHeader        *DSRHeader      `protobuf:"bytes,4,opt,name=dsr_header" json:"dsr_header,omitempty"`
+	FloodingHeader   *FloodingHeader `protobuf:"bytes,5,opt,name=flooding_header" json:"flooding_header,omitempty"`
+	DataHeader       *DataHeader     `protobuf:"bytes,6,opt,name=data_header" json:"data_header,omitempty"`
+	XXX_unrecognized []byte          `json:"-"`
 }
 
 func (m *Header) Reset()         { *m = Header{} }
 func (m *Header) String() string { return proto.CompactTextString(m) }
 func (*Header) ProtoMessage()    {}
 
-func (m *Header) GetDsrOptions() *DSROptions {
-	if m != nil {
-		return m.DsrOptions
+func (m *Header) GetSource() uint32 {
+	if m != nil && m.Source != nil {
+		return *m.Source
 	}
-	return nil
+	return 0
 }
 
-func (m *Header) GetFloodingOptions() *FloodingOptions {
-	if m != nil {
-		return m.FloodingOptions
-	}
-	return nil
-}
-
-type Header_RouteRequest struct {
-	Destination      *string `protobuf:"bytes,1,req,name=destination" json:"destination,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
-}
-
-func (m *Header_RouteRequest) Reset()         { *m = Header_RouteRequest{} }
-func (m *Header_RouteRequest) String() string { return proto.CompactTextString(m) }
-func (*Header_RouteRequest) ProtoMessage()    {}
-
-func (m *Header_RouteRequest) GetDestination() string {
+func (m *Header) GetDestination() uint32 {
 	if m != nil && m.Destination != nil {
 		return *m.Destination
 	}
-	return ""
+	return 0
+}
+
+func (m *Header) GetTtl() uint32 {
+	if m != nil && m.Ttl != nil {
+		return *m.Ttl
+	}
+	return 0
+}
+
+func (m *Header) GetPriority() uint32 {
+	if m != nil && m.Priority != nil {
+		return *m.Priority
+	}
+	return 0
+}
+
+func (m *Header) GetDsrHeader() *DSRHeader {
+	if m != nil {
+		return m.DsrHeader
+	}
+	return nil
+}
+
+func (m *Header) GetFloodingHeader() *FloodingHeader {
+	if m != nil {
+		return m.FloodingHeader
+	}
+	return nil
+}
+
+func (m *Header) GetDataHeader() *DataHeader {
+	if m != nil {
+		return m.DataHeader
+	}
+	return nil
+}
+
+type FloodingHeader struct {
+	PacketId         *uint32 `protobuf:"varint,2,req,name=packet_id" json:"packet_id,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *FloodingHeader) Reset()         { *m = FloodingHeader{} }
+func (m *FloodingHeader) String() string { return proto.CompactTextString(m) }
+func (*FloodingHeader) ProtoMessage()    {}
+
+func (m *FloodingHeader) GetPacketId() uint32 {
+	if m != nil && m.PacketId != nil {
+		return *m.PacketId
+	}
+	return 0
+}
+
+type DataHeader struct {
+	FileId           *uint32  `protobuf:"varint,1,req,name=file_id" json:"file_id,omitempty"`
+	Destinations     []uint32 `protobuf:"varint,2,rep,packed,name=destinations" json:"destinations,omitempty"`
+	XXX_unrecognized []byte   `json:"-"`
+}
+
+func (m *DataHeader) Reset()         { *m = DataHeader{} }
+func (m *DataHeader) String() string { return proto.CompactTextString(m) }
+func (*DataHeader) ProtoMessage()    {}
+
+func (m *DataHeader) GetFileId() uint32 {
+	if m != nil && m.FileId != nil {
+		return *m.FileId
+	}
+	return 0
+}
+
+func (m *DataHeader) GetDestinations() []uint32 {
+	if m != nil {
+		return m.Destinations
+	}
+	return nil
+}
+
+type DSRHeader struct {
+	RouteRequest          *DSRHeader_RouteRequest           `protobuf:"bytes,1,opt,name=route_request" json:"route_request,omitempty"`
+	RouteReplies          []*DSRHeader_RouteReply           `protobuf:"bytes,2,rep,name=route_replies" json:"route_replies,omitempty"`
+	NodeUnreachableErrors []*DSRHeader_NodeUnreachableError `protobuf:"bytes,3,rep,name=node_unreachable_errors" json:"node_unreachable_errors,omitempty"`
+	AckRequest            *DSRHeader_AckRequest             `protobuf:"bytes,4,opt,name=ack_request" json:"ack_request,omitempty"`
+	Ack                   []*DSRHeader_Ack                  `protobuf:"bytes,5,rep,name=ack" json:"ack,omitempty"`
+	SourceRoute           *DSRHeader_SourceRoute            `protobuf:"bytes,6,opt,name=source_route" json:"source_route,omitempty"`
+	XXX_unrecognized      []byte                            `json:"-"`
+}
+
+func (m *DSRHeader) Reset()         { *m = DSRHeader{} }
+func (m *DSRHeader) String() string { return proto.CompactTextString(m) }
+func (*DSRHeader) ProtoMessage()    {}
+
+func (m *DSRHeader) GetRouteRequest() *DSRHeader_RouteRequest {
+	if m != nil {
+		return m.RouteRequest
+	}
+	return nil
+}
+
+func (m *DSRHeader) GetRouteReplies() []*DSRHeader_RouteReply {
+	if m != nil {
+		return m.RouteReplies
+	}
+	return nil
+}
+
+func (m *DSRHeader) GetNodeUnreachableErrors() []*DSRHeader_NodeUnreachableError {
+	if m != nil {
+		return m.NodeUnreachableErrors
+	}
+	return nil
+}
+
+func (m *DSRHeader) GetAckRequest() *DSRHeader_AckRequest {
+	if m != nil {
+		return m.AckRequest
+	}
+	return nil
+}
+
+func (m *DSRHeader) GetAck() []*DSRHeader_Ack {
+	if m != nil {
+		return m.Ack
+	}
+	return nil
+}
+
+func (m *DSRHeader) GetSourceRoute() *DSRHeader_SourceRoute {
+	if m != nil {
+		return m.SourceRoute
+	}
+	return nil
+}
+
+// If route request sent, receiver must be broadcast and source must be
+// originating node, TTL can be used
+type DSRHeader_RouteRequest struct {
+	Id               *uint32  `protobuf:"varint,1,req,name=id" json:"id,omitempty"`
+	Target           *uint32  `protobuf:"varint,2,req,name=target" json:"target,omitempty"`
+	Addresses        []uint32 `protobuf:"varint,3,rep,packed,name=addresses" json:"addresses,omitempty"`
+	XXX_unrecognized []byte   `json:"-"`
+}
+
+func (m *DSRHeader_RouteRequest) Reset()         { *m = DSRHeader_RouteRequest{} }
+func (m *DSRHeader_RouteRequest) String() string { return proto.CompactTextString(m) }
+func (*DSRHeader_RouteRequest) ProtoMessage()    {}
+
+func (m *DSRHeader_RouteRequest) GetId() uint32 {
+	if m != nil && m.Id != nil {
+		return *m.Id
+	}
+	return 0
+}
+
+func (m *DSRHeader_RouteRequest) GetTarget() uint32 {
+	if m != nil && m.Target != nil {
+		return *m.Target
+	}
+	return 0
+}
+
+func (m *DSRHeader_RouteRequest) GetAddresses() []uint32 {
+	if m != nil {
+		return m.Addresses
+	}
+	return nil
+}
+
+// Source will be set to the node originating the reply
+// Destination will be the node who originated the request
+type DSRHeader_RouteReply struct {
+	Addresses        []uint32 `protobuf:"varint,1,rep,packed,name=addresses" json:"addresses,omitempty"`
+	XXX_unrecognized []byte   `json:"-"`
+}
+
+func (m *DSRHeader_RouteReply) Reset()         { *m = DSRHeader_RouteReply{} }
+func (m *DSRHeader_RouteReply) String() string { return proto.CompactTextString(m) }
+func (*DSRHeader_RouteReply) ProtoMessage()    {}
+
+func (m *DSRHeader_RouteReply) GetAddresses() []uint32 {
+	if m != nil {
+		return m.Addresses
+	}
+	return nil
+}
+
+// Did not implement other errors because we do not need
+type DSRHeader_NodeUnreachableError struct {
+	Salvage                *uint32 `protobuf:"varint,1,req,name=salvage" json:"salvage,omitempty"`
+	Source                 *uint32 `protobuf:"varint,2,req,name=source" json:"source,omitempty"`
+	Destination            *uint32 `protobuf:"varint,3,req,name=destination" json:"destination,omitempty"`
+	UnreachableNodeAddress *uint32 `protobuf:"varint,4,req,name=unreachable_node_address" json:"unreachable_node_address,omitempty"`
+	XXX_unrecognized       []byte  `json:"-"`
+}
+
+func (m *DSRHeader_NodeUnreachableError) Reset()         { *m = DSRHeader_NodeUnreachableError{} }
+func (m *DSRHeader_NodeUnreachableError) String() string { return proto.CompactTextString(m) }
+func (*DSRHeader_NodeUnreachableError) ProtoMessage()    {}
+
+func (m *DSRHeader_NodeUnreachableError) GetSalvage() uint32 {
+	if m != nil && m.Salvage != nil {
+		return *m.Salvage
+	}
+	return 0
+}
+
+func (m *DSRHeader_NodeUnreachableError) GetSource() uint32 {
+	if m != nil && m.Source != nil {
+		return *m.Source
+	}
+	return 0
+}
+
+func (m *DSRHeader_NodeUnreachableError) GetDestination() uint32 {
+	if m != nil && m.Destination != nil {
+		return *m.Destination
+	}
+	return 0
+}
+
+func (m *DSRHeader_NodeUnreachableError) GetUnreachableNodeAddress() uint32 {
+	if m != nil && m.UnreachableNodeAddress != nil {
+		return *m.UnreachableNodeAddress
+	}
+	return 0
+}
+
+type DSRHeader_AckRequest struct {
+	Identification   *uint32 `protobuf:"varint,1,req,name=identification" json:"identification,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *DSRHeader_AckRequest) Reset()         { *m = DSRHeader_AckRequest{} }
+func (m *DSRHeader_AckRequest) String() string { return proto.CompactTextString(m) }
+func (*DSRHeader_AckRequest) ProtoMessage()    {}
+
+func (m *DSRHeader_AckRequest) GetIdentification() uint32 {
+	if m != nil && m.Identification != nil {
+		return *m.Identification
+	}
+	return 0
+}
+
+type DSRHeader_Ack struct {
+	Identification   *uint32 `protobuf:"varint,1,req,name=identification" json:"identification,omitempty"`
+	Source           *uint32 `protobuf:"varint,2,req,name=source" json:"source,omitempty"`
+	Destination      *uint32 `protobuf:"varint,3,req,name=destination" json:"destination,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *DSRHeader_Ack) Reset()         { *m = DSRHeader_Ack{} }
+func (m *DSRHeader_Ack) String() string { return proto.CompactTextString(m) }
+func (*DSRHeader_Ack) ProtoMessage()    {}
+
+func (m *DSRHeader_Ack) GetIdentification() uint32 {
+	if m != nil && m.Identification != nil {
+		return *m.Identification
+	}
+	return 0
+}
+
+func (m *DSRHeader_Ack) GetSource() uint32 {
+	if m != nil && m.Source != nil {
+		return *m.Source
+	}
+	return 0
+}
+
+func (m *DSRHeader_Ack) GetDestination() uint32 {
+	if m != nil && m.Destination != nil {
+		return *m.Destination
+	}
+	return 0
+}
+
+type DSRHeader_SourceRoute struct {
+	Salvage          *uint32  `protobuf:"varint,1,req,name=salvage" json:"salvage,omitempty"`
+	SegsLeft         *uint32  `protobuf:"varint,2,req,name=segs_left" json:"segs_left,omitempty"`
+	Addresses        []uint32 `protobuf:"varint,3,rep,packed,name=addresses" json:"addresses,omitempty"`
+	XXX_unrecognized []byte   `json:"-"`
+}
+
+func (m *DSRHeader_SourceRoute) Reset()         { *m = DSRHeader_SourceRoute{} }
+func (m *DSRHeader_SourceRoute) String() string { return proto.CompactTextString(m) }
+func (*DSRHeader_SourceRoute) ProtoMessage()    {}
+
+func (m *DSRHeader_SourceRoute) GetSalvage() uint32 {
+	if m != nil && m.Salvage != nil {
+		return *m.Salvage
+	}
+	return 0
+}
+
+func (m *DSRHeader_SourceRoute) GetSegsLeft() uint32 {
+	if m != nil && m.SegsLeft != nil {
+		return *m.SegsLeft
+	}
+	return 0
+}
+
+func (m *DSRHeader_SourceRoute) GetAddresses() []uint32 {
+	if m != nil {
+		return m.Addresses
+	}
+	return nil
 }
 
 func init() {
