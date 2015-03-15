@@ -65,7 +65,7 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan
 	originateFlooding := make(chan flooding.OriginationRequest)
 	r.forwardFlooding = forwardFlooding
 	r.originateFlooding = originateFlooding
-	flooding.RoutePackets(forwardFlooding, originateFlooding, out)
+	flooding.RoutePackets(localID, forwardFlooding, originateFlooding, out)
 
 	go func() {
 		for c := range toForward {

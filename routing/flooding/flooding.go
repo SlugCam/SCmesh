@@ -26,7 +26,7 @@ func randomUint32() uint32 {
 	return binary.LittleEndian.Uint32(b)
 }
 
-func RoutePackets(toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, out chan<- packet.Packet) {
+func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, out chan<- packet.Packet) {
 	// TODO, should persist?
 	//encountered := make(map[string]bool)
 	go func() {
@@ -45,9 +45,11 @@ func RoutePackets(toForward <-chan packet.Packet, toOriginate <-chan Origination
 				// Make flooding header
 				p.Header.Ttl = proto.Uint32(uint32(origReq.TTL))
 				p.Header.FloodingHeader = new(header.FloodingHeader)
-				// Assign random
 				p.Header.FloodingHeader.PacketId = proto.Uint32(randomUint32())
+				// Assign other required fields
+				p.Header.Source = proto.Uint32(localID)
 				// Send to output
+				out <- *p
 			}
 
 		}
