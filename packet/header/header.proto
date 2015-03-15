@@ -1,6 +1,30 @@
 package header;
 
-message DSROptions {
+message Header {
+    required uint32 source = 1;
+    optional uint32 destination = 7;
+    optional uint32 ttl = 2;
+    optional uint32 priority = 3;
+
+    oneof RoutingOptions {
+        DSRHeader dsr_header = 4;
+        FloodingHeader flooding_header = 5;
+    }
+
+    optional DataHeader data_header = 6;
+}
+
+message FloodingHeader {
+    required uint32 packet_id = 2;
+}
+
+message DataHeader {
+    required uint32 file_id = 1;
+    repeated uint32 destinations = 2 [packed=true];
+    //required uint32 
+}
+
+message DSRHeader {
     // If route request sent, receiver must be broadcast and source must be
     // originating node, TTL can be used
     message RouteRequest {
@@ -17,20 +41,7 @@ message DSROptions {
     }
     repeated RouteReply route_replies = 2;
 
-    /*
-       message RouteError {
-       enum ErrorType {
-       NODE_UNREACHABLE = 1;
-    //FLOW_STATE_NOT_SUPPORTED = 2;
-    //OPTION_NOT_SUPPORTED = 3;
-    }
-    required ErrorType error_type = 1; 
-    required uint32 salvage = 2;
-    required uint32 error_source = 3; // Node that discovered the link error.
-    required uint32 error_destination = 4; // Node to which error must be delivered.
-
-    }
-     */
+    // Did not implement other errors because we do not need
     message NodeUnreachableError {
         required uint32 salvage = 1;
         required uint32 source = 2;
@@ -59,20 +70,4 @@ message DSROptions {
     optional SourceRoute source_route = 6;
 }
 
-message FloodingOptions {
 
-}
-
-message Header {
-    required uint32 Source = 1;
-    optional uint32 SequenceNumber = 2;
-    optional uint32 Receiver = 3;
-    optional uint32 Destination = 4;
-    optional uint64 PayloadOffset = 5;
-    optional uint32 TTL = 6;
-
-    oneof RoutingOptions {
-        DSROptions dsr_options = 7;
-        FloodingOptions flooding_options = 8;
-    }
-}
