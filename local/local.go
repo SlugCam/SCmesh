@@ -9,17 +9,30 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/golang/protobuf/proto"
 
 	"github.com/SlugCam/SCmesh/packet"
+	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/SlugCam/SCmesh/routing"
 )
 
-func LocalProcessing(in chan<- packet.Packet, out chan<- packet.Packet) {
+func LocalProcessing(in <-chan packet.Packet, router *routing.Router) {
+	go func() {
+		for c := range in {
+			log.Info("Packet received:", c)
+		}
+	}()
 	go func() {
 		for {
-			p := packet.NewPacket()
+			dh := header.DataHeader{
+				FileId:       proto.Uint32(0),
+				Destinations: []uint32{routing.BroadcastID},
+			}
+			router.OriginateFlooding(20, dh, []byte("Ping!!!"))
+			//h := packet.NewPacket()
 			//p.Header.Type = proto.Int32(1)
-			p.Payload = []byte("Ping!!!")
-			out <- *p
+			//p.Payload = []byte("Ping!!!")
+			//out <- *p
 			time.Sleep(10 * time.Second)
 		}
 

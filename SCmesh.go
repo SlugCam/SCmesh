@@ -18,17 +18,18 @@ import (
 func main() {
 	log.SetLevel(log.DebugLevel)
 	_ = flag.Int("port", 8080, "the port on which to listen for control messages")
+	localId := flag.Int("local id", 0, "the id number for this node, sinks are 0")
 	// program := flag.String("program", "SCcomm", "the program to run")
 	flag.Parse()
 
-	startPipeline()
+	startPipeline(uint32(*localId))
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	wg.Wait()
 }
 
-func startPipeline() {
+func startPipeline(localId uint32) {
 	log.Info("Starting SCmesh")
 
 	// Setup serial
@@ -50,10 +51,8 @@ func startPipeline() {
 
 	packet.ParsePackets(rawPackets, toRouter)
 
-	//local.LocalProcessing(destLocal, toRouter) // Should be
-	local.LocalProcessing(destLocal, fromRouter)
-
-	routing.RoutePackets(toRouter, destLocal, fromRouter)
+	r := routing.RoutePackets(localId, toRouter, destLocal, fromRouter)
+	local.LocalProcessing(destLocal, r)
 
 	packet.PackPackets(fromRouter, packedPackets)
 

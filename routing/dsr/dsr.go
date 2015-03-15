@@ -1,8 +1,17 @@
 package dsr
 
-import "github.com/SlugCam/SCmesh/packet"
+import (
+	"github.com/SlugCam/SCmesh/packet"
+	"github.com/SlugCam/SCmesh/packet/header"
+)
 
 type id uint32
+
+type OriginationRequest struct {
+	TTL        int
+	DataHeader header.DataHeader
+	Data       []byte
+}
 
 type cacheEntry struct {
 	route []id
@@ -28,24 +37,25 @@ func (r *DsrRouter) getCachedRoute() {
 }
 
 // Originate starts the process of sending a packet. It should not be called
-func (r *DsrRouter) originate(p *Packet) {
+func (r *DsrRouter) originate(p *packet.Packet) {
 
 }
 
 func sendRouteRequest() {
 	p := packet.NewPacket()
-	p.Header.DsrHeader = new(header.DsrHeader)
-	p.Header.DsrHeader.RouteRequest = new(header.DsrHeader_RouteRequest)
+	p.Header.DsrHeader = new(header.DSRHeader)
+	p.Header.DsrHeader.RouteRequest = new(header.DSRHeader_RouteRequest)
 }
 
-func StartNewDsr(localID uint32, toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, out chan<- packet.Packet) {
-	r := new(DsrRouter)
+func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, out chan<- packet.Packet) {
+	//r := new(DsrRouter)
 	go func() {
 		for {
 			select {
 			case c := <-toForward:
-
+				_ = c
 			case c := <-toOriginate:
+				_ = c
 			}
 
 		}
