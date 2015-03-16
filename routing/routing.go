@@ -76,6 +76,7 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan
 				for _, d := range dh.GetDestinations() {
 					if d == localID || d == BroadcastID {
 						destLocal <- c
+						break // otherwise could send local more than once
 					}
 				}
 			}

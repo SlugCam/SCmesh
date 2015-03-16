@@ -29,10 +29,6 @@ func LocalProcessing(in <-chan packet.Packet, router *routing.Router) {
 				Destinations: []uint32{routing.BroadcastID},
 			}
 			router.OriginateFlooding(20, dh, []byte("Ping!!!"))
-			//h := packet.NewPacket()
-			//p.Header.Type = proto.Int32(1)
-			//p.Payload = []byte("Ping!!!")
-			//out <- *p
 			time.Sleep(10 * time.Second)
 		}
 

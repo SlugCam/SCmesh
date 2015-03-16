@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
 
 	"sync"
@@ -16,11 +15,17 @@ import (
 )
 
 func main() {
-	log.SetLevel(log.DebugLevel)
 	_ = flag.Int("port", 8080, "the port on which to listen for control messages")
-	localId := flag.Int("local id", 0, "the id number for this node, sinks are 0")
+	localId := flag.Int("local-id", 0, "the id number for this node, sinks are 0")
+	debug := flag.Bool("debug", false, "print debug level log messages")
 	// program := flag.String("program", "SCcomm", "the program to run")
 	flag.Parse()
+
+	if *debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 
 	startPipeline(uint32(*localId))
 
@@ -57,13 +62,6 @@ func startPipeline(localId uint32) {
 	packet.PackPackets(fromRouter, packedPackets)
 
 	writePackets(packedPackets, serial)
-
-	go func() {
-		// print incoming
-		for c := range toRouter {
-			fmt.Println(string(c.Payload))
-		}
-	}()
 
 }
 
