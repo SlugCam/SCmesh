@@ -66,7 +66,7 @@ func startPipeline(localId uint32) {
 }
 
 func writePackets(in <-chan []byte, out io.Writer) {
-	// TODO flush data stream with '\x04'
+	out.Write([]byte{'\x04'}) // Send any extraneous data
 	go func() {
 		for c := range in {
 			out.Write(c)
