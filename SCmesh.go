@@ -12,7 +12,7 @@ import (
 	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/prefilter"
 	"github.com/SlugCam/SCmesh/routing"
-	"github.com/tarm/goserial" // A replacement for the stdlib log
+	"github.com/tarm/serial"
 )
 
 func main() {
