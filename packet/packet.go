@@ -57,7 +57,7 @@ func (p *Preheader) Serialize() []byte {
 
 // Pack takes a single packet and encodes it to the wire format. It will
 // fragment the data if necessary.
-func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
+func (p *Packet) Pack(out chan<- []byte) {
 
 	originalOffset := int(p.Preheader.PayloadOffset)
 	payloadLen := len(p.Payload)
@@ -68,11 +68,12 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 	if err != nil {
 		log.Fatal("marshaling error: ", err)
 	}
+	encodedHeader := crypto.Encode(serializedHeader)
 
-	maxHeaderSize := encrypter.MaxEncryptedLen(len(serializedHeader))
-	maxPreheaderSize := encrypter.MaxEncodedLen(encrypter.NonceSize() + SERIALIZED_PREHEADER_SIZE)
+	headerSize := len(encodedHeader)
+	maxPreheaderSize := crypto.MaxEncodedLen(SERIALIZED_PREHEADER_SIZE)
 	delimiterSize := 4
-	maxPayloadSize := MAX_PACKET_LEN - delimiterSize - maxHeaderSize - maxPreheaderSize
+	maxPayloadSize := MAX_PACKET_LEN - delimiterSize - headerSize - maxPreheaderSize
 
 	for {
 		b := make([]byte, 0, MAX_PACKET_LEN)
@@ -81,6 +82,7 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 		newPreheader := p.Preheader // Will make a copy of the preheader
 		newPreheader.PayloadOffset = uint32(originalOffset + relativeOffset)
 		serializedPreheader := newPreheader.Serialize()
+		encodedPreheader := crypto.Encode(serializedPreheader)
 
 		// Fit Payload
 		remainingPayloadLen := payloadLen - relativeOffset
@@ -91,20 +93,14 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 			// We can fit the rest of the packet
 			nextOffset = payloadLen
 		}
-
 		payloadSlice := p.Payload[relativeOffset:nextOffset]
 		relativeOffset = nextOffset
-
-		// Encrypt and encode headers
-		encryptedHeader, nonce := encrypter.HeaderToWireFormat(serializedPreheader, serializedHeader, payloadSlice)
-		noncePreheader := append(nonce, serializedPreheader...)
-		encodedPreheader := crypto.Encode(noncePreheader)
 
 		// Build packet
 		b = append(b, '\x01') // Packet delimiter
 		b = append(b, encodedPreheader...)
 		b = append(b, '\x00') // Section delimiter
-		b = append(b, encryptedHeader...)
+		b = append(b, encodedHeader...)
 		b = append(b, '\x00') // Section delimiter
 		b = append(b, payloadSlice...)
 		b = append(b, '\x04') // Section delimiter
@@ -118,7 +114,7 @@ func (p *Packet) Pack(encrypter *crypto.Encrypter, out chan<- []byte) {
 	}
 }
 
-func (raw *RawPacket) Parse(crypter *crypto.Encrypter) (pack Packet, err error) {
+func (raw *RawPacket) Parse() (pack Packet, err error) {
 	// Copy reference to payload
 	pack.Payload = raw.Payload
 	log.Debug("Parsing this raw packet:", raw)
@@ -130,18 +126,17 @@ func (raw *RawPacket) Parse(crypter *crypto.Encrypter) (pack Packet, err error) 
 	}
 	// Parse preheader
 	log.Debug("Decoded preheader is:", decodedPreheader)
-	if len(decodedPreheader) != SERIALIZED_PREHEADER_SIZE+NONCE_LENGTH {
+	if len(decodedPreheader) != SERIALIZED_PREHEADER_SIZE {
 		err = errors.New("incorrect preheader length")
 		return
 	}
-	nonce := decodedPreheader[0:12]
-	pack.Preheader.Receiver = binary.LittleEndian.Uint16(decodedPreheader[12:14])
-	pack.Preheader.PayloadOffset = binary.LittleEndian.Uint32(decodedPreheader[14:18])
+	pack.Preheader.Receiver = binary.LittleEndian.Uint16(decodedPreheader[0:2])
+	pack.Preheader.PayloadOffset = binary.LittleEndian.Uint32(decodedPreheader[2:6])
 
 	// TODO If receiver is incorrect we can drop (or continue if peeking is desired)
 
 	// Unseal header with preheader 0x00 payload as authenticated data
-	serializedHeader, err := crypter.HeaderFromWireFormat(nonce, decodedPreheader[12:18], raw.Header, raw.Payload)
+	serializedHeader, err := crypto.Decode(raw.Header)
 	if err != nil {
 		return
 	}
@@ -156,10 +151,9 @@ func (raw *RawPacket) Parse(crypter *crypto.Encrypter) (pack Packet, err error) 
 // ParsePackets is intended to be used in the main SCmesh pipeline to parse raw
 // packets provided from the in channel and push them to the out channel.
 func ParsePackets(in <-chan RawPacket, out chan<- Packet) {
-	encrypter := crypto.NewEncrypter("/slugcam/key") // Should only be used by one goroutine at a time
 	go func() {
 		for c := range in {
-			p, err := c.Parse(encrypter)
+			p, err := c.Parse()
 			if err != nil {
 				log.Error("Packet dropped during parsing.", err)
 			} else {
@@ -172,10 +166,9 @@ func ParsePackets(in <-chan RawPacket, out chan<- Packet) {
 // PackPackets is intended to be used in the main SCmesh pipeline to pack
 // packets provided from the in channel and push them to the out channel.
 func PackPackets(in <-chan Packet, out chan<- []byte) {
-	encrypter := crypto.NewEncrypter("/slugcam/key") // Should only be used by one goroutine at a time
 	go func() {
 		for p := range in {
-			p.Pack(encrypter, out)
+			p.Pack(out)
 		}
 	}()
 }
