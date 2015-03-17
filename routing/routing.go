@@ -4,6 +4,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/routing/dsr"
 	"github.com/SlugCam/SCmesh/routing/flooding"
 )
@@ -47,7 +48,7 @@ func (r *Router) OriginateFlooding(TTL int, dataHeader header.DataHeader, data [
 // data destinations list, then it forwards the packet to either the DSR or
 // flooding module. It will also strip the flooding header if it sees a DSR
 // header.
-func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan<- packet.Packet, out chan<- packet.Packet) *Router {
+func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan<- packet.Packet, out chan<- packet.Packet) pipeline.Router {
 
 	r := new(Router)
 

@@ -13,10 +13,11 @@ import (
 
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/routing"
 )
 
-func LocalProcessing(in <-chan packet.Packet, router *routing.Router) {
+func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 	go func() {
 		for c := range in {
 			log.Info("Packet received:", c)
