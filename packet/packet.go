@@ -9,7 +9,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/SlugCam/SCmesh/packet/crypto"
 	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/golang/protobuf/proto"
 )
@@ -17,12 +16,11 @@ import (
 const (
 	MAX_PACKET_LEN            = 1460
 	SERIALIZED_PREHEADER_SIZE = 6
-	NONCE_LENGTH              = 12
 )
 
 type RawPacket struct {
-	Preheader []byte // Ascii85 Encoded Plaintext
-	Header    []byte // Ascii85 Encoded Encrypted Serialized Header Object
+	Preheader []byte // Ascii85 encoded plaintext
+	Header    []byte // Ascii85 encoded serialized header object
 	Payload   []byte // Encoded encrypted payload
 }
 
@@ -68,10 +66,10 @@ func (p *Packet) Pack(out chan<- []byte) {
 	if err != nil {
 		log.Fatal("marshaling error: ", err)
 	}
-	encodedHeader := crypto.Encode(serializedHeader)
+	encodedHeader := encode(serializedHeader)
 
 	headerSize := len(encodedHeader)
-	maxPreheaderSize := crypto.MaxEncodedLen(SERIALIZED_PREHEADER_SIZE)
+	maxPreheaderSize := maxEncodedLen(SERIALIZED_PREHEADER_SIZE)
 	delimiterSize := 4
 	maxPayloadSize := MAX_PACKET_LEN - delimiterSize - headerSize - maxPreheaderSize
 
@@ -82,7 +80,7 @@ func (p *Packet) Pack(out chan<- []byte) {
 		newPreheader := p.Preheader // Will make a copy of the preheader
 		newPreheader.PayloadOffset = uint32(originalOffset + relativeOffset)
 		serializedPreheader := newPreheader.Serialize()
-		encodedPreheader := crypto.Encode(serializedPreheader)
+		encodedPreheader := encode(serializedPreheader)
 
 		// Fit Payload
 		remainingPayloadLen := payloadLen - relativeOffset
@@ -120,7 +118,7 @@ func (raw *RawPacket) Parse() (pack Packet, err error) {
 	log.Debug("Parsing this raw packet:", raw)
 
 	// Decode preheader
-	decodedPreheader, err := crypto.Decode(raw.Preheader)
+	decodedPreheader, err := decode(raw.Preheader)
 	if err != nil {
 		return
 	}
@@ -136,7 +134,7 @@ func (raw *RawPacket) Parse() (pack Packet, err error) {
 	// TODO If receiver is incorrect we can drop (or continue if peeking is desired)
 
 	// Unseal header with preheader 0x00 payload as authenticated data
-	serializedHeader, err := crypto.Decode(raw.Header)
+	serializedHeader, err := decode(raw.Header)
 	if err != nil {
 		return
 	}
