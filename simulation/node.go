@@ -1,12 +1,18 @@
 package simulation
 
+import (
+	"github.com/SlugCam/SCmesh/config"
+	"github.com/SlugCam/SCmesh/packet"
+	"github.com/SlugCam/SCmesh/pipeline"
+)
+
 // Node is a simulated SlugCam mesh node. This is used in integration testing
 // and simulation. This struct should be created using the NewNode function.
 type Node struct {
 	Router          pipeline.Router
 	IncomingPackets <-chan packet.Packet
 	LocalPackets    <-chan packet.Packet
-	mockWiFly       MockWiFly
+	mockWiFly       *MockWiFly
 }
 
 // NewNode creates a new simulated node. It does this by creating a default
@@ -15,8 +21,8 @@ type Node struct {
 func StartNewNode(id uint32) *Node {
 	n := new(Node)
 
-	s := StartMockWiFly()
-	c := pipeline.DefaultConfig(id, s)
+	n.mockWiFly = StartMockWiFly()
+	c := config.DefaultConfig(id, n.mockWiFly)
 
 	n.LocalPackets = InterceptLocal(&c)
 	n.IncomingPackets = InterceptIncoming(&c)
@@ -40,12 +46,10 @@ func (n *Node) Link(n2 *Node) {
 // the configuration object.
 func InterceptRouter(config *pipeline.Config) <-chan pipeline.Router {
 	ch := make(chan pipeline.Router, 1)
-	log.Info("InterceptRouter")
 
 	prevRoutePackets := config.RoutePackets
 
 	config.RoutePackets = func(localID uint32, toForward <-chan packet.Packet, destLocal chan<- packet.Packet, out chan<- packet.Packet) pipeline.Router {
-		log.Info("NewRoutePackets")
 		r := prevRoutePackets(localID, toForward, destLocal, out)
 		ch <- r
 		return r

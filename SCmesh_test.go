@@ -8,7 +8,6 @@ import (
 
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
-	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/prefilter"
 	"github.com/SlugCam/SCmesh/routing"
 	"github.com/SlugCam/SCmesh/simulation"
@@ -19,27 +18,13 @@ import (
 func TestFlooding(t *testing.T) {
 
 	// Setup node 1
-	s1 := simulation.StartMockWiFly()
-	c1 := DefaultConfig(uint32(1), s1)
-	r1ch := InterceptRouter(&c1)
-	pipeline.Start(c1)
-	r1 := <-r1ch // r1 is now the router for node 1
-
-	// Setup node 2
-	s2 := simulation.StartMockWiFly()
-	c2 := DefaultConfig(uint32(2), s2)
-	l2ch := InterceptLocal(&c2) // l2ch is the local packets for node 2
-	pipeline.Start(c2)
-
-	// Setup node 3
-	s3 := simulation.StartMockWiFly()
-	c3 := DefaultConfig(uint32(3), s3)
-	l3ch := InterceptLocal(&c3) // l2ch is the local packets for node 2
-	pipeline.Start(c3)
+	n1 := simulation.StartNewNode(uint32(1))
+	n2 := simulation.StartNewNode(uint32(2))
+	n3 := simulation.StartNewNode(uint32(3))
 
 	// Link nodes
-	s1.Link(s2)
-	s2.Link(s3)
+	n1.Link(n2)
+	n2.Link(n3)
 
 	// Send packet 1 from node 1
 	dh := header.DataHeader{
@@ -47,9 +32,9 @@ func TestFlooding(t *testing.T) {
 		Destinations: []uint32{routing.BroadcastID},
 	}
 
-	r1.OriginateFlooding(1, dh, []byte{0})
+	n1.Router.OriginateFlooding(1, dh, []byte{0})
 
-	log.Info(<-l2ch)
+	log.Info(<-n2.LocalPackets)
 
 }
 

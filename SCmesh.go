@@ -2,16 +2,12 @@ package main
 
 import (
 	"flag"
-	"io"
 
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/SlugCam/SCmesh/local"
-	"github.com/SlugCam/SCmesh/packet"
+	"github.com/SlugCam/SCmesh/config"
 	"github.com/SlugCam/SCmesh/pipeline"
-	"github.com/SlugCam/SCmesh/prefilter"
-	"github.com/SlugCam/SCmesh/routing"
 	"github.com/tarm/serial"
 )
 
@@ -38,36 +34,11 @@ func main() {
 	}
 
 	// Start pipeline
-	conf := DefaultConfig(uint32(*localID), serial)
+	conf := config.DefaultConfig(uint32(*localID), serial)
 	pipeline.Start(conf)
 
 	// Block forever
 	var wg sync.WaitGroup
 	wg.Add(1)
 	wg.Wait()
-}
-
-// DefaultConfig returns the typical default pipeline configuration for SCmesh.
-func DefaultConfig(localID uint32, serial io.ReadWriter) pipeline.Config {
-	return pipeline.Config{
-		LocalID:         localID,
-		Serial:          serial,
-		Prefilter:       prefilter.Prefilter,
-		ParsePackets:    packet.ParsePackets,
-		RoutePackets:    routing.RoutePackets,
-		LocalProcessing: local.LocalProcessing,
-		PackPackets:     packet.PackPackets,
-		WritePackets:    writePackets,
-	}
-}
-
-// writePackets writes byte slices to an io.Writer. Used as the last stage in
-// the pipeline.
-func writePackets(in <-chan []byte, out io.Writer) {
-	out.Write([]byte{'\x04'}) // Send any extraneous data
-	go func() {
-		for c := range in {
-			out.Write(c)
-		}
-	}()
 }
