@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-//
+// TestMockWiFly is a very simple test. A more thorough test could be created.
 func TestMockWiFly(t *testing.T) {
 	data := []byte("Testing MockWiFly\x04")
 
