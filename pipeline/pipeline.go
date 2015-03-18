@@ -13,7 +13,7 @@ type Router interface {
 	OriginateFlooding(TTL int, dataHeader header.DataHeader, data []byte)
 }
 
-type Configuration struct {
+type Config struct {
 	LocalID         uint32
 	Serial          io.ReadWriter
 	Prefilter       func(in io.Reader, out chan<- packet.RawPacket)
@@ -24,7 +24,7 @@ type Configuration struct {
 	WritePackets    func(in <-chan []byte, out io.Writer)
 }
 
-func Start(c Configuration) {
+func Start(c Config) {
 	log.Info("Starting SCmesh")
 
 	// Make channels

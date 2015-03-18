@@ -16,12 +16,14 @@ import (
 )
 
 func main() {
+
+	// Parse command flags
 	_ = flag.Int("port", 8080, "the port on which to listen for control messages")
 	localID := flag.Int("local-id", 0, "the id number for this node, sinks are 0")
 	debug := flag.Bool("debug", false, "print debug level log messages")
-	// program := flag.String("program", "SCcomm", "the program to run")
 	flag.Parse()
 
+	// Modify logging level
 	if *debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
@@ -35,8 +37,20 @@ func main() {
 		log.Panic(err)
 	}
 
-	conf := pipeline.Configuration{
-		LocalID:         uint32(*localID),
+	// Start pipeline
+	conf := DefaultConfig(uint32(*localID), serial)
+	pipeline.Start(conf)
+
+	// Block forever
+	var wg sync.WaitGroup
+	wg.Add(1)
+	wg.Wait()
+}
+
+// DefaultConfig returns the typical default pipeline configuration for SCmesh.
+func DefaultConfig(localID uint32, serial io.ReadWriter) pipeline.Config {
+	return pipeline.Config{
+		LocalID:         localID,
 		Serial:          serial,
 		Prefilter:       prefilter.Prefilter,
 		ParsePackets:    packet.ParsePackets,
@@ -45,14 +59,10 @@ func main() {
 		PackPackets:     packet.PackPackets,
 		WritePackets:    writePackets,
 	}
-
-	pipeline.Start(conf)
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	wg.Wait()
 }
 
+// writePackets writes byte slices to an io.Writer. Used as the last stage in
+// the pipeline.
 func writePackets(in <-chan []byte, out io.Writer) {
 	out.Write([]byte{'\x04'}) // Send any extraneous data
 	go func() {
