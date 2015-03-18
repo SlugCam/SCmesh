@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
@@ -13,6 +14,17 @@ import (
 	"github.com/SlugCam/SCmesh/simulation"
 	"github.com/SlugCam/SCmesh/util"
 )
+
+// readChannel simply reads a packet from the channel or returns nil if no
+// packet is ready.
+func readChannel(ch <-chan packet.Packet) *packet.Packet {
+	select {
+	case c := <-ch:
+		return &c
+	case <-time.After(1 * time.Second):
+		return nil
+	}
+}
 
 // TestFlooding is an integration test for the flooding routing type.
 func TestFlooding(t *testing.T) {
@@ -32,9 +44,29 @@ func TestFlooding(t *testing.T) {
 		Destinations: []uint32{routing.BroadcastID},
 	}
 
+	// t1
 	n1.Router.OriginateFlooding(1, dh, []byte{0})
 
-	log.Info(<-n2.LocalPackets)
+	p := <-n2.IncomingPackets
+	// Checks on packet
+	if p.Header.FloodingHeader == nil {
+		t.Error("packet did not have a flooding header.")
+	}
+	if p.Preheader.Receiver != routing.BroadcastID {
+		t.Error("flooding packets should always have receiver set to broadcast.")
+	}
+	log.Info(p)
+
+	// Check that no other packets were received
+	select {
+	case <-n1.IncomingPackets:
+		t.Error("received packet on n1 during t1")
+	case <-n2.IncomingPackets:
+		t.Error("received multiple packets on n2 during t1.")
+	case <-n3.IncomingPackets:
+		t.Error("received packet on n3 during t1.")
+	case <-time.After(1 * time.Second):
+	}
 
 }
 
