@@ -1,7 +1,6 @@
 package flooding
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -67,7 +66,7 @@ func TestPacketCreation(t *testing.T) {
 	if p1.Preheader.Receiver != BroadcastID {
 		t.Error("flooding packets should always have receiver set to broadcast.")
 	}
-	if p1.Preheader.Offset != offset {
+	if p1.Preheader.PayloadOffset != offset {
 		t.Error("offset not set correctly in packet.")
 	}
 
