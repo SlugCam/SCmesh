@@ -15,7 +15,7 @@ import (
 
 const (
 	MAX_PACKET_LEN            = 1460
-	SERIALIZED_PREHEADER_SIZE = 6
+	SERIALIZED_PREHEADER_SIZE = 8
 )
 
 type RawPacket struct {
@@ -25,7 +25,7 @@ type RawPacket struct {
 }
 
 type Preheader struct {
-	Receiver      uint16
+	Receiver      uint32
 	PayloadOffset uint32
 }
 
@@ -43,10 +43,10 @@ func NewPacket() *Packet {
 
 // serializePreheader provides serialization of the packet preheader.
 func (p *Preheader) Serialize() []byte {
-	out := make([]byte, 0, 6)
-	receiver := make([]byte, 2)
+	out := make([]byte, 0, 8)
+	receiver := make([]byte, 4)
 	offset := make([]byte, 4)
-	binary.LittleEndian.PutUint16(receiver, p.Receiver)
+	binary.LittleEndian.PutUint32(receiver, p.Receiver)
 	binary.LittleEndian.PutUint32(offset, p.PayloadOffset)
 	out = append(out, receiver...)
 	out = append(out, offset...)
@@ -128,12 +128,11 @@ func (raw *RawPacket) Parse() (pack Packet, err error) {
 		err = errors.New("incorrect preheader length")
 		return
 	}
-	pack.Preheader.Receiver = binary.LittleEndian.Uint16(decodedPreheader[0:2])
-	pack.Preheader.PayloadOffset = binary.LittleEndian.Uint32(decodedPreheader[2:6])
+	pack.Preheader.Receiver = binary.LittleEndian.Uint32(decodedPreheader[0:4])
+	pack.Preheader.PayloadOffset = binary.LittleEndian.Uint32(decodedPreheader[4:8])
 
 	// TODO If receiver is incorrect we can drop (or continue if peeking is desired)
 
-	// Unseal header with preheader 0x00 payload as authenticated data
 	serializedHeader, err := decode(raw.Header)
 	if err != nil {
 		return
