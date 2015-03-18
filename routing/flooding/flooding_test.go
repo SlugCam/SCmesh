@@ -30,17 +30,19 @@ func TestPacketCreation(t *testing.T) {
 
 	// Originate packet
 	toOriginate <- OriginationRequest{
-		TTL:        TTL,
-		DataHeader: dh,
-		Data:       data,
+		TTL:           TTL,
+		DataHeader:    dh,
+		Data:          data,
+		PayloadOffset: offset,
 	}
 	p1 := <-out
 
 	// Originate a second packet
 	toOriginate <- OriginationRequest{
-		TTL:        TTL,
-		DataHeader: dh,
-		Data:       data,
+		TTL:           TTL,
+		DataHeader:    dh,
+		Data:          data,
+		PayloadOffset: offset,
 	}
 	p2 := <-out
 

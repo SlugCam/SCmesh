@@ -10,10 +10,13 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+const BROADCAST_ID = uint32(0xFFFF)
+
 type OriginationRequest struct {
-	TTL        int
-	DataHeader header.DataHeader
-	Data       []byte
+	TTL           int
+	PayloadOffset uint32
+	DataHeader    header.DataHeader
+	Data          []byte
 }
 
 // TODO use counter
@@ -48,6 +51,8 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-
 				p.Header.FloodingHeader.PacketId = proto.Uint32(randomUint32())
 				// Assign other required fields
 				p.Header.Source = proto.Uint32(localID)
+				p.Preheader.PayloadOffset = origReq.PayloadOffset
+				p.Preheader.Receiver = BROADCAST_ID
 				// Send to output
 				out <- *p
 			}
