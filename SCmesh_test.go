@@ -1,5 +1,7 @@
 package main
 
+// TODO check timeouts, are they the best way to test these things?
+
 import (
 	"testing"
 	"time"
@@ -15,18 +17,8 @@ import (
 	"github.com/SlugCam/SCmesh/util"
 )
 
-// readChannel simply reads a packet from the channel or returns nil if no
-// packet is ready.
-func readChannel(ch <-chan packet.Packet) *packet.Packet {
-	select {
-	case c := <-ch:
-		return &c
-	case <-time.After(1 * time.Second):
-		return nil
-	}
-}
-
-// TestFlooding is an integration test for the flooding routing type.
+// TestFlooding is an integration test for the flooding routing type. Unit tests
+// for flooding are in the flooding package.
 func TestFlooding(t *testing.T) {
 
 	// Setup node 1
@@ -47,15 +39,15 @@ func TestFlooding(t *testing.T) {
 	// t1
 	n1.Router.OriginateFlooding(1, dh, []byte{0})
 
-	p := <-n2.IncomingPackets
-	// Checks on packet
-	if p.Header.FloodingHeader == nil {
-		t.Error("packet did not have a flooding header.")
+	var p packet.Packet
+	select {
+	case p := <-n2.IncomingPackets:
+		if p.Header.FloodingHeader == nil {
+			t.Error("packet did not have a flooding header.")
+		}
+	case <-time.After(30 * time.Seconds):
+		t.Error("flooding packet never sent.")
 	}
-	if p.Preheader.Receiver != routing.BroadcastID {
-		t.Error("flooding packets should always have receiver set to broadcast.")
-	}
-	log.Info(p)
 
 	// Check that no other packets were received
 	select {
@@ -64,7 +56,7 @@ func TestFlooding(t *testing.T) {
 	case <-n2.IncomingPackets:
 		t.Error("received multiple packets on n2 during t1.")
 	case <-n3.IncomingPackets:
-		t.Error("received packet on n3 during t1.")
+		t.Error("received packet on n3 during t1, this means TTL was not considered.")
 	case <-time.After(1 * time.Second):
 	}
 
@@ -77,7 +69,7 @@ func TestDecodingEncoding(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 	// Build a packet
 	p := packet.NewPacket()
-	p.Preheader.Receiver = uint16(3)
+	p.Preheader.Receiver = uint32(3)
 	p.Header.Source = proto.Uint32(1)
 	p.Payload = []byte("Hello world!")
 	log.Printf("Original: %+v\n", p)
