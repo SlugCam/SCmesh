@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/SlugCam/SCmesh.svg?branch=master)](https://travis-ci.org/SlugCam/SCmesh)
+
 Warning, this code is not suitable for anything at the moment. It is under heavy
 development.
 
