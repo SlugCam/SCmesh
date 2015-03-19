@@ -19,7 +19,7 @@ import (
 
 // TestFlooding is an integration test for the flooding routing type. Unit tests
 // for flooding are in the flooding package.
-func TestFlooding(t *testing.T) {
+func TestFloodingTTL(t *testing.T) {
 
 	// Setup node 1
 	n1 := simulation.StartNewNode(uint32(1))
@@ -39,13 +39,9 @@ func TestFlooding(t *testing.T) {
 	// t1
 	n1.Router.OriginateFlooding(1, dh, []byte{0})
 
-	var p packet.Packet
 	select {
-	case p := <-n2.IncomingPackets:
-		if p.Header.FloodingHeader == nil {
-			t.Error("packet did not have a flooding header.")
-		}
-	case <-time.After(30 * time.Seconds):
+	case <-n2.IncomingPackets:
+	case <-time.After(30 * time.Second):
 		t.Error("flooding packet never sent.")
 	}
 
@@ -60,6 +56,31 @@ func TestFlooding(t *testing.T) {
 	case <-time.After(1 * time.Second):
 	}
 
+	// t2
+	n1.Router.OriginateFlooding(2, dh, []byte{0})
+
+	select {
+	case <-n2.IncomingPackets:
+	case <-time.After(10 * time.Second):
+		t.Error("flooding packet with TTL 2 did not reach 1 hop neighbor.")
+	}
+
+	select {
+	case <-n3.IncomingPackets:
+	case <-time.After(10 * time.Second):
+		t.Error("flooding packet with TTL 2 did not reach 2 hop neighbor")
+	}
+
+	// Check that no other packets were received
+	select {
+	case <-n1.IncomingPackets:
+		t.Error("received packet on n1 during t1")
+	case <-n2.IncomingPackets:
+		t.Error("received multiple packets on n2 during t1.")
+	case <-n3.IncomingPackets:
+		t.Error("received packet on n3 during t1, this means TTL was not considered.")
+	case <-time.After(1 * time.Second):
+	}
 }
 
 // TestDecodingEncoding is a functional test of the process of decoding and

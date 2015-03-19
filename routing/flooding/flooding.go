@@ -29,15 +29,53 @@ func randomUint32() uint32 {
 	return binary.LittleEndian.Uint32(b)
 }
 
+//TODO needs testing, better way of copying struct?
+
+// processTTL takes the packet and decrements the TTL. It returns a boolean
+// indicating whether the packet should be forwarded or not (true means
+// forward). This function will ensure to only change values on new structs
+// instead of modifying existing structs to avoid modifying values that may be
+// in use concurrently in other parts of the system. However, p should not be in
+// use anywhere in the system (but the header, etc. may be).  TODO should TTL be
+// optional?
+func processTTL(p *packet.Packet) bool {
+	if p.Header.Ttl == nil {
+		return true
+	}
+
+	newHeader := *p.Header
+	newTTL := *newHeader.Ttl
+	newTTL = newTTL - 1
+	newHeader.Ttl = &newTTL
+
+	if newTTL > uint32(0) {
+		return true
+	} else {
+		return false
+	}
+}
+
+// RoutePackets starts a goroutine that performs flooding routing functions.
+// None of the functions in the module check for the existence of a packet
+// header or a flooding header, this needs to be done by the routing module that
+// uses this function.
+// TODO check for used headers?
 func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, out chan<- packet.Packet) {
 	// TODO, should persist?
 	//encountered := make(map[string]bool)
 	go func() {
 		for {
 			select {
-			case c := <-toForward:
-				_ = c
+			case p := <-toForward:
 				// Add to cache based on id and offset
+
+				// Adjust TTL
+				forward := processTTL(&p)
+
+				// Forward
+				if forward {
+					out <- p
+				}
 
 			case origReq := <-toOriginate:
 				// Make new packet

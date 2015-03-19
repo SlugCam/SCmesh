@@ -88,6 +88,8 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan
 				//c.Header.FloodingOptions = nil // Remove
 			} else if c.Header.GetFloodingHeader() != nil {
 				// Then this is Flooding
+				r.forwardFlooding <- c
+
 			}
 		}
 	}()
