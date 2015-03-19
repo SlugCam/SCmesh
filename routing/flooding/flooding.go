@@ -1,3 +1,8 @@
+// TODO could isolate logic from RoutePackets into separate functions for better
+// unit testing.
+
+// The flooding package provides functions for facilitating flood style routing
+// in the SCmesh software for the SlugCam project.
 package flooding
 
 import (
