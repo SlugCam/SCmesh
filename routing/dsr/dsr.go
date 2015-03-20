@@ -5,40 +5,29 @@ import (
 	"github.com/SlugCam/SCmesh/packet/header"
 )
 
-type id uint32
+type NodeID uint32
+type Route []NodeID
 
+// OriginationRequest is a struct used to describe a new packet we should
+// originate. They are used in RoutePackets to provide communication to this
+// module from outside.
 type OriginationRequest struct {
 	TTL        int
 	DataHeader header.DataHeader
 	Data       []byte
 }
 
-type cacheEntry struct {
-	route []id
-	cost  int
+type requestTableEntry struct {
+	TTL   uint32    // TTL for last route request send for this target
+	time  time.Time // Time of last request
+	count int       // Number of consecutive route discoveries since last valid reply
 }
 
 // These data structures could be optimized
 type DsrRouter struct {
-	routeCache []cacheEntry
-	sendBuffer []packet.Packet
-}
-
-func (r *DsrRouter) updateRouteCache() {
-	// Update cache
-	// Check Send buffer if any packets destination field is now reachable
-	// If so send packet and remove from buffer
-
-}
-
-// getCachedRoute looks into the route cache and returns a route
-func (r *DsrRouter) getCachedRoute() {
-
-}
-
-// Originate starts the process of sending a packet. It should not be called
-func (r *DsrRouter) originate(p *packet.Packet) {
-
+	routes       routeCache
+	sendBuffer   []packet.Packet              // TODO should be a list
+	routeRequest map[uint32]requestTableEntry // node id -> table entry
 }
 
 func sendRouteRequest() {
