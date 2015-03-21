@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/SlugCam/SCmesh.svg?branch=master)](https://travis-ci.org/SlugCam/SCmesh)
+[![Coverage Status](https://coveralls.io/repos/SlugCam/SCmesh/badge.svg)](https://coveralls.io/r/SlugCam/SCmesh)
 
 Warning, this code is not suitable for anything at the moment. It is under heavy
 development.
