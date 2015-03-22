@@ -1,20 +1,32 @@
 package dsr
 
+// TODO set required fields for packet including RECEIVER
+
 import (
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/SlugCam/SCmesh/util"
 	"github.com/golang/protobuf/proto"
 )
 
+// newDSRPacket creates a new packet.Packet with a DSRHeader attached.
 func newDSRPacket() *packet.Packet {
 	p := packet.NewPacket()
 	p.Header.DsrHeader = new(header.DSRHeader)
 	return p
 }
 
-func newRouteRequest() *packet.Packet {
+func newRouteRequest(source NodeID, dest NodeID) *packet.Packet {
 	p := newDSRPacket()
-	p.Header.DsrHeader.RouteRequest = new(header.DSRHeader_RouteRequest)
+	p.Header.Source = proto.Uint32(uint32(source))
+	p.Preheader.Receiver = uint32(BROADCAST_ID)
+
+	rr := new(header.DSRHeader_RouteRequest)
+	p.Header.DsrHeader.RouteRequest = rr
+	// TODO Set up route request
+	rr.Id = proto.Uint32(util.RandomUint32()) // TODO not random
+	rr.Target = proto.Uint32(uint32(dest))
+	//Addresses
 	return p
 }
 
@@ -30,6 +42,7 @@ func newOriginationPacket(o *OriginationRequest) *packet.Packet {
 // the packet does not have a header or DSR header we add them. This process is
 // outlines in RFC4728 sec. 8.1.3.
 func addSourceRoute(p *packet.Packet, route []NodeID) error {
+	// Ensure that the proper headers exist
 	if p.Header == nil {
 		p.Header = new(header.Header)
 	}

@@ -1,8 +1,20 @@
 package util
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
+	"log"
 )
+
+func RandomUint32() uint32 {
+	b := make([]byte, 4)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Panic("Error producing random number in util.RandomUint32.", err)
+	}
+	return binary.LittleEndian.Uint32(b)
+}
 
 // max takes two integers and returns the larger of the two.
 func max(a int, b int) int {

@@ -10,6 +10,8 @@ import (
 type NodeID uint32
 type Route []NodeID
 
+const BROADCAST_ID = NodeID(0xFFFF)
+
 // OriginationRequest is a struct used to describe a new packet we should
 // originate. They are used in RoutePackets to provide communication to this
 // module from outside.
