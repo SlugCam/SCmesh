@@ -1,6 +1,7 @@
 package dsr
 
 // TODO we should be able to maintain cache size so it does not grow to large.
+// TODO don't add duplicates, instead update timeout
 
 import "container/list"
 
@@ -21,6 +22,7 @@ type routeCache struct {
 	l *list.List
 }
 
+// newRouteCache initialized an empty routeCache.
 func newRouteCache() *routeCache {
 	c := new(routeCache)
 	c.l = list.New()
@@ -36,7 +38,10 @@ func (c *routeCache) addRoute(route []NodeID, cost int) {
 }
 
 // getRoute looks into the route cache and returns shortest path. Returns nil if
-// no route is found.
+// no route is found. The route is returned as specified by the DSR specs of
+// what a route in a source route should look like, meaning the source and
+// destination are not included. In other words this function will return an
+// array of the intermediate nodes to reach node dest.
 // TODO should return lowest cost path
 func (c *routeCache) getRoute(dest NodeID) []NodeID {
 

@@ -86,6 +86,7 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan
 			if c.Header.GetDsrHeader() != nil {
 				// Then this is DSR
 				//c.Header.FloodingOptions = nil // Remove
+				r.forwardDSR <- c
 			} else if c.Header.GetFloodingHeader() != nil {
 				// Then this is Flooding
 				r.forwardFlooding <- c

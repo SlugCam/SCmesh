@@ -14,9 +14,9 @@ type Route []NodeID
 // originate. They are used in RoutePackets to provide communication to this
 // module from outside.
 type OriginationRequest struct {
-	TTL        int
-	DataHeader header.DataHeader
-	Data       []byte
+	Destination NodeID
+	DataHeader  header.DataHeader
+	Data        []byte
 }
 
 type requestTableEntry struct {
@@ -25,19 +25,8 @@ type requestTableEntry struct {
 	count int       // Number of consecutive route discoveries since last valid reply
 }
 
-// These data structures could be optimized
-type DsrRouter struct {
-	routes       routeCache
-	sendBuffer   []packet.Packet              // TODO should be a list
-	routeRequest map[uint32]requestTableEntry // node id -> table entry
-}
-
-func sendRouteRequest() {
-	p := packet.NewPacket()
-	p.Header.DsrHeader = new(header.DSRHeader)
-	p.Header.DsrHeader.RouteRequest = new(header.DSRHeader_RouteRequest)
-}
-
+// RoutePackets is the main pipeline function that creates a DSR router and
+// manages packet origination and forwarding.
 func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, out chan<- packet.Packet) {
 	//r := new(DsrRouter)
 	go func() {
