@@ -16,6 +16,7 @@ type router struct {
 func newRouter() *router {
 	r := new(router)
 	r.routeCache = newRouteCache()
+	r.sendBuffer = newSendBuffer()
 	return r
 }
 

@@ -21,12 +21,6 @@ type OriginationRequest struct {
 	Data        []byte
 }
 
-type requestTableEntry struct {
-	TTL   uint32    // TTL for last route request send for this target
-	time  time.Time // Time of last request
-	count int       // Number of consecutive route discoveries since last valid reply
-}
-
 // RoutePackets is the main pipeline function that creates a DSR router and
 // manages packet origination and forwarding.
 func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, out chan<- packet.Packet) {
