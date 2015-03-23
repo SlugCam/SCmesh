@@ -5,7 +5,10 @@ package dsr
 // This file implements a Route Request Table as described in section 4.3 of
 // RFC4728.
 
-import "container/list"
+import (
+	"container/list"
+	"time"
+)
 
 type sentEntry struct {
 	//TTL   uint32    // TTL for last route request send for this target
@@ -20,7 +23,7 @@ type receivedEntry struct {
 // originate at the local node, but do not include the local node. So the first
 // node listed in a route is the node to visit after the local node.
 type requestTable struct {
-	sentRequests     map[NodeID]requestTableEntry
+	sentRequests     map[NodeID]sentEntry
 	receivedRequests map[NodeID]list.List // Map initiator to list of requests received
 }
 
@@ -30,7 +33,7 @@ func newRequestTable() *requestTable {
 	return c
 }
 
-func (c *requestTable) sentRequest(target []NodeID) {
+func (c *requestTable) sentRequest(target NodeID) {
 	// TODO what about 0 values
 	v, ok := c.sentRequests[target]
 	if ok {
@@ -61,7 +64,7 @@ func (c *requestTable) receivedReply(target NodeID) {
 // request was sent. Used to see if we should resend a route request when a
 // timeout occurs.
 func (c *requestTable) discoveryInProcess(target NodeID) bool {
-	v, ok := c.sentRequestss
+	v, ok := c.sentRequests[target]
 	if ok {
 		return v.count > 0
 	} else {

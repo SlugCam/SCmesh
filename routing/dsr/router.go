@@ -10,7 +10,7 @@ type router struct {
 	localID      NodeID
 	routeCache   *routeCache
 	sendBuffer   *sendBuffer
-	routeRequest map[uint32]requestTableEntry // node id -> table entry
+	requestTable requestTable
 	out          chan<- packet.Packet
 }
 
@@ -51,16 +51,16 @@ func (r *router) originate(o *OriginationRequest) {
 
 // DISCOVERY FUNCTIONS
 
-func (r *router) requestDiscovery(target NodeID) {
-	if !r.requestTable.discoveryInProcess(target) {
-		sendRouteRequest(target)
-	}
-}
 func (r *router) sendRouteRequest(target NodeID) {
 	r.requestTable.sentRequest(target)
-	r.out <- newRouteRequest(r.localID, target)
+	r.out <- *newRouteRequest(r.localID, target)
 	// TODO set timeout
 
+}
+func (r *router) requestDiscovery(target NodeID) {
+	if !r.requestTable.discoveryInProcess(target) {
+		r.sendRouteRequest(target)
+	}
 }
 func (r *router) processRouteRequestTimeout(target NodeID) {
 	if r.requestTable.discoveryInProcess(target) {
@@ -72,7 +72,7 @@ func (r *router) processRouteRequestTimeout(target NodeID) {
 
 // processPacket follows the procedure outlined in RFC4728 in section 8.1.4
 func (r *router) processPacket(p *packet.Packet) {
-	processRouteRequest(p)
+	r.processRouteRequest(p)
 }
 
 // processRouteRequest is specified by section 8.2.2
