@@ -30,6 +30,8 @@ type requestTable struct {
 // newRouteCache initialized an empty requestTable.
 func newRequestTable() *requestTable {
 	c := new(requestTable)
+	c.sentRequests = make(map[NodeID]sentEntry)
+	c.receivedRequests = make(map[NodeID]list.List)
 	return c
 }
 

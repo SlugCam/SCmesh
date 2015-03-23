@@ -27,7 +27,12 @@ type Router struct {
 // flooding, the destination field must be set in the data header for any node
 // to process its payload.
 func (r *Router) OriginateDSR(dest uint32, dataHeader header.DataHeader, data []byte) {
-
+	log.Debug("OriginateDSR called")
+	r.originateDSR <- dsr.OriginationRequest{
+		Destination: dsr.NodeID(dest),
+		DataHeader:  dataHeader,
+		Data:        data,
+	}
 }
 
 // OriginateFlood sends a flooding packet. Note that the packet will be relayed

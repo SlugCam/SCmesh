@@ -10,15 +10,17 @@ type router struct {
 	localID      NodeID
 	routeCache   *routeCache
 	sendBuffer   *sendBuffer
-	requestTable requestTable
+	requestTable *requestTable
 	out          chan<- packet.Packet
 }
 
-func newRouter(localID NodeID) *router {
+func newRouter(localID NodeID, out chan<- packet.Packet) *router {
 	r := new(router)
 	r.localID = localID
 	r.routeCache = newRouteCache()
 	r.sendBuffer = newSendBuffer()
+	r.requestTable = newRequestTable()
+	r.out = out
 	return r
 }
 
@@ -52,12 +54,14 @@ func (r *router) originate(o *OriginationRequest) {
 // DISCOVERY FUNCTIONS
 
 func (r *router) sendRouteRequest(target NodeID) {
+	log.Info("sendRR")
 	r.requestTable.sentRequest(target)
 	r.out <- *newRouteRequest(r.localID, target)
 	// TODO set timeout
 
 }
 func (r *router) requestDiscovery(target NodeID) {
+	log.Info("reqdisc")
 	if !r.requestTable.discoveryInProcess(target) {
 		r.sendRouteRequest(target)
 	}

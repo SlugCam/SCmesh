@@ -17,11 +17,39 @@ import (
 	"github.com/SlugCam/SCmesh/util"
 )
 
+func TestDSRRouteDiscovery(t *testing.T) {
+
+	n1 := simulation.StartNewNode(uint32(1))
+	n2 := simulation.StartNewNode(uint32(2))
+	n3 := simulation.StartNewNode(uint32(3))
+
+	// Link nodes
+	n1.Link(n2)
+	n2.Link(n3)
+
+	// Send packet 1 from node 1
+	dh := header.DataHeader{
+		FileId:       proto.Uint32(1),
+		Destinations: []uint32{routing.BroadcastID},
+	}
+
+	// t1
+	n1.Router.OriginateDSR(uint32(3), dh, []byte{0})
+
+	select {
+	case p := <-n2.IncomingPackets:
+		if p.Header == nil || p.Header.DsrHeader == nil || p.Header.DsrHeader.RouteRequest == nil {
+			t.Fatal("n2 received packet, but it was not a route request")
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("route request not received by n2")
+	}
+}
+
 // TestFlooding is an integration test for the flooding routing type. Unit tests
 // for flooding are in the flooding package.
 func TestFloodingTTL(t *testing.T) {
 
-	// Setup node 1
 	n1 := simulation.StartNewNode(uint32(1))
 	n2 := simulation.StartNewNode(uint32(2))
 	n3 := simulation.StartNewNode(uint32(3))
