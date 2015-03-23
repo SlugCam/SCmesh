@@ -1,67 +1,70 @@
 package dsr
 
+// TODO handle timeouts
+
+// This file implements a Route Request Table as described in section 4.3 of
+// RFC4728.
+
 import "container/list"
 
-type requestTableEntry struct {
+type sentEntry struct {
 	//TTL   uint32    // TTL for last route request send for this target
 	time  time.Time // Time of last request
-	count int       // Number of consecutive route discoveries since last valid reply
+	count int       // Number of consecutive route discoveries since last valid reply, if 0 this means reply has been received
 }
 
-// A routeCache contains a collection of cached routes. These routes all
+type receivedEntry struct {
+}
+
+// A requestTable contains a collection of cached routes. These routes all
 // originate at the local node, but do not include the local node. So the first
 // node listed in a route is the node to visit after the local node.
-type routeCache struct {
-	l *list.List
+type requestTable struct {
+	sentRequests     map[NodeID]requestTableEntry
+	receivedRequests map[NodeID]list.List // Map initiator to list of requests received
 }
 
-// newRouteCache initialized an empty routeCache.
-func newRouteCache() *routeCache {
-	c := new(routeCache)
-	c.l = list.New()
+// newRouteCache initialized an empty requestTable.
+func newRequestTable() *requestTable {
+	c := new(requestTable)
 	return c
 }
 
-// addRoute adds a route to the cache.
-func (c *routeCache) addRoute(route []NodeID, cost int) {
-	c.l.PushBack(cacheEntry{
-		route: route,
-		cost:  cost,
-	})
-}
-
-// getRoute looks into the route cache and returns shortest path. Returns nil if
-// no route is found. The route is returned as specified by the DSR specs of
-// what a route in a source route should look like, meaning the source and
-// destination are not included. In other words this function will return an
-// array of the intermediate nodes to reach node dest.
-// TODO should return lowest cost path
-func (c *routeCache) getRoute(dest NodeID) []NodeID {
-
-	var shortestPath []NodeID
-
-	for e := c.l.Front(); e != nil; e = e.Next() {
-		curEntry := e.Value.(cacheEntry)
-		curRoute := curEntry.route
-		i := findNodeIndex(curRoute, dest)
-		if i > -1 {
-			newRoute := curRoute[:i+1]
-			if shortestPath == nil || len(newRoute) < len(shortestPath) {
-				shortestPath = newRoute
-			}
+func (c *requestTable) sentRequest(target []NodeID) {
+	// TODO what about 0 values
+	v, ok := c.sentRequests[target]
+	if ok {
+		// update
+		v.count = v.count + 1
+		v.time = time.Now()
+	} else {
+		// new request issued
+		c.sentRequests[target] = sentEntry{
+			time:  time.Now(),
+			count: 1,
 		}
 	}
-
-	return shortestPath
 }
 
-// findNodeIndex finds d (destination) in r (route). If it is found, it returns
-// the index of the destination, otherwise it returns -1.
-func findNodeIndex(r []NodeID, d NodeID) int {
-	for i, v := range r {
-		if v == d {
-			return i
-		}
+// receivedReply updates the request table to bring the count of requests sent
+// for a target to 0. Should be called whenever a reply is found. If no entry
+// exists in the request table nothing happens.
+func (c *requestTable) receivedReply(target NodeID) {
+	// TODO what about 0 values
+	v, ok := c.sentRequests[target]
+	if ok {
+		v.count = 0
 	}
-	return -1
+}
+
+// hasReceivedReply returns true if a reply has been received since our last
+// request was sent. Used to see if we should resend a route request when a
+// timeout occurs.
+func (c *requestTable) discoveryInProcess(target NodeID) bool {
+	v, ok := c.sentRequestss
+	if ok {
+		return v.count > 0
+	} else {
+		return false
+	}
 }

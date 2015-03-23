@@ -7,14 +7,16 @@ import (
 
 // These data structures could be optimized
 type router struct {
+	localID      NodeID
 	routeCache   *routeCache
 	sendBuffer   *sendBuffer
 	routeRequest map[uint32]requestTableEntry // node id -> table entry
 	out          chan<- packet.Packet
 }
 
-func newRouter() *router {
+func newRouter(localID NodeID) *router {
 	r := new(router)
+	r.localID = localID
 	r.routeCache = newRouteCache()
 	r.sendBuffer = newSendBuffer()
 	return r
@@ -35,7 +37,7 @@ func (r *router) originate(o *OriginationRequest) {
 		// If no route found perform route discovery
 		r.sendBuffer.addPacket(packet)
 		// TODO initiateRouteDiscovery
-		r.initiateRouteDiscovery(o.Destination)
+		r.requestDiscovery(o.Destination)
 	} else {
 		// Otherwise add source route option to packet
 		err := addSourceRoute(packet, route)
@@ -47,17 +49,35 @@ func (r *router) originate(o *OriginationRequest) {
 	}
 }
 
-func (r *router) initiateRouteDiscovery(dest NodeID) {
+// DISCOVERY FUNCTIONS
+
+func (r *router) requestDiscovery(target NodeID) {
+	if !r.requestTable.discoveryInProcess(target) {
+		sendRouteRequest(target)
+	}
+}
+func (r *router) sendRouteRequest(target NodeID) {
+	r.requestTable.sentRequest(target)
+	r.out <- newRouteRequest(r.localID, target)
+	// TODO set timeout
 
 }
+func (r *router) processRouteRequestTimeout(target NodeID) {
+	if r.requestTable.discoveryInProcess(target) {
+		r.sendRouteRequest(target)
+	}
+}
+
+// PROCESSING FUNCTIONS
 
 // processPacket follows the procedure outlined in RFC4728 in section 8.1.4
 func (r *router) processPacket(p *packet.Packet) {
 	processRouteRequest(p)
 }
 
-// processRouteRequest
-func processRouteRequest(p *packet.Packet) {
+// processRouteRequest is specified by section 8.2.2
+func (r *router) processRouteRequest(p *packet.Packet) {
+
 	// First cache the route on the route request seen so far
 
 }
