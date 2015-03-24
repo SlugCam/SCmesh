@@ -28,10 +28,10 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-
 	go func() {
 		for {
 			select {
-			case c := <-toForward:
-				_ = c
+			case p := <-toForward:
+				r.forward(p)
 			case o := <-toOriginate:
-				r.originate(&o)
+				r.originate(o)
 			}
 
 		}

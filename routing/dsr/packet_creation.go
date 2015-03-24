@@ -30,7 +30,7 @@ func newRouteRequest(source NodeID, dest NodeID) *packet.Packet {
 	return p
 }
 
-func newOriginationPacket(o *OriginationRequest) *packet.Packet {
+func newOriginationPacket(o OriginationRequest) *packet.Packet {
 	p := newDSRPacket()
 	p.Header.DataHeader = &o.DataHeader
 	p.Payload = o.Data
