@@ -1,10 +1,9 @@
 package dsr
 
 import (
-	"errors"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet"
+	"github.com/golang/protobuf/proto"
 )
 
 // These data structures could be optimized
@@ -90,40 +89,95 @@ func (r *router) forward(p packet.Packet) {
 	nh.DsrHeader = &nd
 	p.Header = &nh
 
-	err := r.processRouteRequest(&p)
-	if err != nil {
-		log.Error("processPacket: dropping packet:", err)
+	cont := r.processRouteRequest(&p)
+	if !cont {
 		return
 	}
-	r.out <- p
 }
 
-// processRouteRequest is specified by section 8.2.2. If an error is returned
-// the packet should be dropped.
-func (r *router) processRouteRequest(p *packet.Packet) error {
+func (r *router) sendAlongSourceRoute(p *packet.Packet) {
+	if processSourceRoute(p) {
+		log.Info("processRouteRequest: sending:", p)
+		r.out <- *p
+	}
+}
+
+// TODO check if header exists
+// pg62
+// Returns true if we should forward, false if we do not forward
+func processSourceRoute(p *packet.Packet) bool {
+	// TODO more stuff
+	// decrement segments left
+	sr := p.Header.DsrHeader.SourceRoute
+	segsLeft := *sr.SegsLeft
+
+	if segsLeft == 0 {
+		if p.Header.Destination == nil {
+			return false
+		}
+		p.Header.DsrHeader.SourceRoute = nil         // remove header
+		p.Preheader.Receiver = *p.Header.Destination // last link
+		return true
+	}
+
+	n := uint32(len(sr.Addresses))
+
+	if segsLeft > n {
+		// TODO send error (in spec ICMP error)
+		return false
+	}
+
+	segsLeft = segsLeft - 1
+	sr.SegsLeft = proto.Uint32(segsLeft)
+
+	i := n - segsLeft - 1 // The minus one is because our array is 0 based, rfc describes 1 based
+
+	p.Preheader.Receiver = sr.Addresses[i]
+	if p.Preheader.Receiver == uint32(BROADCAST_ID) {
+		// No address can be a multicast address
+		return false
+	}
+	// TODO should this be here? this is where the spec is
+	if p.Header.Destination == nil || *p.Header.Destination == uint32(BROADCAST_ID) {
+		return false
+	}
+	// TODO process TTL
+	// TODO more stuff
+	// route maintainence
+	return true
+}
+
+// processRouteRequest is specified by section 8.2.2.
+// True means continue processing
+func (r *router) processRouteRequest(p *packet.Packet) bool {
 	rr := p.Header.DsrHeader.RouteRequest
 	if rr == nil {
-		return nil // no route request on packet
+		return true // no route request on packet
 	}
 
 	// TODO First cache the route on the route request seen so far
 
 	// Check if we are target
 	if *rr.Target == uint32(r.localID) {
-		// TODO return route reply
-		return nil // Is this right?
+		reply := newRouteReply(rr.Addresses, *p.Header.Source, uint32(r.localID))
+		r.sendAlongSourceRoute(reply)
+		return true // Is this right?
 	}
 
 	// Check if addresses contains our ip, if so drop packet immediately
+	if *p.Header.Source == uint32(r.localID) {
+		return false
+	}
 	for _, a := range rr.Addresses {
 		if a == uint32(r.localID) {
-			return errors.New("loop found in route request")
+			log.Error("loop found in route request")
+			return false
 		}
 	}
 
 	// Check for route request entry to see if we have seen this route request
 	if r.requestTable.hasReceivedRequest(NodeID(*p.Header.Source), NodeID(*rr.Target), *rr.Id) {
-		return errors.New("route request already seen")
+		return false // route request already seen
 	}
 
 	// At this point continue processing
@@ -139,6 +193,7 @@ func (r *router) processRouteRequest(p *packet.Packet) error {
 
 	// TODO Forward RR
 	// TODO BROADCAST JITTER
-	return nil
+	r.out <- *p
+	return false
 
 }

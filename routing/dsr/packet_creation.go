@@ -65,3 +65,27 @@ func addSourceRoute(p *packet.Packet, route []NodeID) error {
 
 	return nil
 }
+
+// TODO rr id included? not shown in packet specs
+func newRouteReply(addresses []uint32, orig uint32, target uint32) *packet.Packet {
+	p := newDSRPacket()
+
+	reply := new(header.DSRHeader_RouteReply)
+	p.Header.DsrHeader.RouteReply = reply
+
+	reply.Addresses = make([]uint32, len(addresses))
+	copy(reply.Addresses, addresses)
+
+	// find return route
+	returnRoute := make([]NodeID, len(addresses))
+	for i, a := range addresses {
+		returnRoute[len(addresses)-1-i] = NodeID(a)
+	}
+
+	addSourceRoute(p, returnRoute)
+
+	p.Header.Destination = proto.Uint32(orig)
+	p.Header.Source = proto.Uint32(target)
+
+	return p
+}
