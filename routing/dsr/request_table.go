@@ -1,6 +1,7 @@
 package dsr
 
 // TODO handle timeouts
+// TODO limit received requests size
 
 // This file implements a Route Request Table as described in section 4.3 of
 // RFC4728.
@@ -24,16 +25,18 @@ type receivedEntry struct {
 // node listed in a route is the node to visit after the local node.
 type requestTable struct {
 	sentRequests     map[NodeID]sentEntry
-	receivedRequests map[NodeID]list.List // Map initiator to list of requests received
+	receivedRequests map[NodeID]*list.List // Map initiator to list of requests received
 }
 
 // newRouteCache initialized an empty requestTable.
 func newRequestTable() *requestTable {
 	c := new(requestTable)
 	c.sentRequests = make(map[NodeID]sentEntry)
-	c.receivedRequests = make(map[NodeID]list.List)
+	c.receivedRequests = make(map[NodeID]*list.List)
 	return c
 }
+
+// FUNCTIONS FOR OUTGOING REQUESTS
 
 func (c *requestTable) sentRequest(target NodeID) {
 	// TODO what about 0 values
@@ -72,4 +75,42 @@ func (c *requestTable) discoveryInProcess(target NodeID) bool {
 	} else {
 		return false
 	}
+}
+
+// FUNCTIONS INCOMING REQUESTS
+
+// TODO should check size and drop oldest entry
+func (c *requestTable) checkReceivedRequests(initiator NodeID, target NodeID, id uint32) bool {
+	v := c.receivedRequests[initiator]
+	if v == nil {
+		return false
+	}
+
+	testValue := struct {
+		NodeID
+		uint32
+	}{target, id}
+
+	for e := v.Front(); e != nil; e = e.Next() {
+		// do something with e.Value
+		if e.Value == testValue {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *requestTable) receivedRequest(initiator NodeID, target NodeID, id uint32) {
+
+	v, ok := c.receivedRequests[initiator]
+	if !ok {
+		// list does not exist, make new list
+		v = list.New()
+		c.receivedRequests[initiator] = v
+	}
+	v.PushBack(struct {
+		NodeID
+		uint32
+	}{target, id})
+
 }
