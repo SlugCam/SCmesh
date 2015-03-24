@@ -1,6 +1,8 @@
 package dsr
 
 import (
+	"errors"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet"
 )
@@ -74,14 +76,38 @@ func (r *router) processRouteRequestTimeout(target NodeID) {
 
 // PROCESSING FUNCTIONS
 
+// TODO avoid null dereferences
+
 // processPacket follows the procedure outlined in RFC4728 in section 8.1.4
 func (r *router) processPacket(p *packet.Packet) {
-	r.processRouteRequest(p)
+	err := r.processRouteRequest(p)
+	if err != nil {
+		log.Error("processPacket: dropping packet:", err)
+		return
+	}
 }
 
 // processRouteRequest is specified by section 8.2.2
-func (r *router) processRouteRequest(p *packet.Packet) {
+func (r *router) processRouteRequest(p *packet.Packet) error {
+	rr := p.Header.DsrHeader.RouteRequest
+	if rr == nil {
+		return nil // no route request on packet
+	}
 
-	// First cache the route on the route request seen so far
+	// TODO First cache the route on the route request seen so far
 
+	// Check if we are target
+	if *rr.Target == uint32(r.localID) {
+		// return route reply
+	}
+
+	// Check if addresses contains our ip, if so drop packet immediately
+	for _, a := range rr.Addresses {
+		if a == uint32(r.localID) {
+			return errors.New("loop found in route request")
+		}
+	}
+
+	// Check for route request entry to see if we have seen this route request
+	return nil
 }
