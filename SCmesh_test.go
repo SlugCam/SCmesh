@@ -36,6 +36,7 @@ func TestDSRRouteDiscovery(t *testing.T) {
 	// t1
 	n1.Router.OriginateDSR(uint32(3), dh, []byte{0})
 
+	// n2 gets route request
 	select {
 	case p := <-n2.IncomingPackets:
 		if p.Header == nil || p.Header.DsrHeader == nil || p.Header.DsrHeader.RouteRequest == nil {
@@ -44,6 +45,17 @@ func TestDSRRouteDiscovery(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("route request not received by n2")
 	}
+
+	// n3 gets route request
+	select {
+	case p := <-n3.IncomingPackets:
+		if p.Header == nil || p.Header.DsrHeader == nil || p.Header.DsrHeader.RouteRequest == nil {
+			t.Fatal("n3 received packet, but it was not a route request")
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("route request not received by n3")
+	}
+
 }
 
 // TestFlooding is an integration test for the flooding routing type. Unit tests
