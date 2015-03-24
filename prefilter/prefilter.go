@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet"
@@ -62,7 +61,7 @@ func (s *scanner) readUntil(delim byte) (data []byte, err error) {
 
 // TODO discard packet if MAX_PACKET_LEN reached!!!
 func (s *scanner) readRawPacket() (p packet.RawPacket, err error) {
-	start := time.Now()
+	//start := time.Now()
 	preheader, err := s.readUntil('\x00')
 	if err != nil {
 		return
@@ -82,8 +81,8 @@ func (s *scanner) readRawPacket() (p packet.RawPacket, err error) {
 	p.Header = header
 	p.Payload = payload
 
-	end := time.Now()
-	log.Info("Scanned packet in: ", end.Sub(start))
+	//end := time.Now()
+	//log.Info("Scanned packet in: ", end.Sub(start))
 	return
 }
 
