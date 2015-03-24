@@ -129,7 +129,7 @@ func (m *DataHeader) GetDestinations() []uint32 {
 
 type DSRHeader struct {
 	RouteRequest          *DSRHeader_RouteRequest           `protobuf:"bytes,1,opt,name=route_request" json:"route_request,omitempty"`
-	RouteReplies          []*DSRHeader_RouteReply           `protobuf:"bytes,2,rep,name=route_replies" json:"route_replies,omitempty"`
+	RouteReply            *DSRHeader_RouteReply             `protobuf:"bytes,2,opt,name=route_reply" json:"route_reply,omitempty"`
 	NodeUnreachableErrors []*DSRHeader_NodeUnreachableError `protobuf:"bytes,3,rep,name=node_unreachable_errors" json:"node_unreachable_errors,omitempty"`
 	AckRequest            *DSRHeader_AckRequest             `protobuf:"bytes,4,opt,name=ack_request" json:"ack_request,omitempty"`
 	Ack                   []*DSRHeader_Ack                  `protobuf:"bytes,5,rep,name=ack" json:"ack,omitempty"`
@@ -148,9 +148,9 @@ func (m *DSRHeader) GetRouteRequest() *DSRHeader_RouteRequest {
 	return nil
 }
 
-func (m *DSRHeader) GetRouteReplies() []*DSRHeader_RouteReply {
+func (m *DSRHeader) GetRouteReply() *DSRHeader_RouteReply {
 	if m != nil {
-		return m.RouteReplies
+		return m.RouteReply
 	}
 	return nil
 }

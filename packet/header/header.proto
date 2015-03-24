@@ -39,7 +39,7 @@ message DSRHeader {
     message RouteReply {
         repeated uint32 addresses = 1 [packed=true]; // ordered from initiator not including initiator
     }
-    repeated RouteReply route_replies = 2;
+    optional RouteReply route_reply = 2;
 
     // Did not implement other errors because we do not need
     message NodeUnreachableError {
