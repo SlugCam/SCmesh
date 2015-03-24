@@ -18,11 +18,11 @@ func TestIncomingRequestCache(t *testing.T) {
 		{NodeID(8), NodeID(3), uint32(1)},
 	}
 	for _, c := range toAdd {
-		if rt.checkReceivedRequests(c.initiator, c.target, c.id) {
+		if rt.hasReceivedRequest(c.initiator, c.target, c.id) {
 			t.Fatal("received route request returned that it was seen in an initialized cache.")
 		}
 		rt.receivedRequest(c.initiator, c.target, c.id)
-		if !rt.checkReceivedRequests(c.initiator, c.target, c.id) {
+		if !rt.hasReceivedRequest(c.initiator, c.target, c.id) {
 			t.Fatal("received route request not marked as seen after adding it to cache.")
 		}
 

@@ -80,7 +80,7 @@ func (c *requestTable) discoveryInProcess(target NodeID) bool {
 // FUNCTIONS INCOMING REQUESTS
 
 // TODO should check size and drop oldest entry
-func (c *requestTable) checkReceivedRequests(initiator NodeID, target NodeID, id uint32) bool {
+func (c *requestTable) hasReceivedRequest(initiator NodeID, target NodeID, id uint32) bool {
 	v := c.receivedRequests[initiator]
 	if v == nil {
 		return false

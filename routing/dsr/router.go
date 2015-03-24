@@ -109,5 +109,9 @@ func (r *router) processRouteRequest(p *packet.Packet) error {
 	}
 
 	// Check for route request entry to see if we have seen this route request
+	r.requestTable.hasReceivedRequest(NodeID(*p.Header.Source), NodeID(*rr.Target), *rr.Id)
 	return nil
+
+	// Add request to cache
+
 }
