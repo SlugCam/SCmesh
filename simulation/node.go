@@ -20,7 +20,6 @@ type Node struct {
 // The pipeline for this node will be started when calling this function.
 func StartNewNode(id uint32) *Node {
 	n := new(Node)
-
 	n.mockWiFly = StartMockWiFly()
 	c := config.DefaultConfig(id, n.mockWiFly)
 

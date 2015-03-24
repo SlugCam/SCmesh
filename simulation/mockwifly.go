@@ -94,5 +94,6 @@ func (m *MockWiFly) Read(p []byte) (n int, err error) {
 // needed later.
 func (n1 *MockWiFly) Link(n2 *MockWiFly) {
 	n1.connections = append(n1.connections, n2.sharedCh)
+	n2.connections = append(n2.connections, n1.sharedCh)
 
 }
