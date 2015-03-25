@@ -111,9 +111,12 @@ func TestDSROrigination(t *testing.T) {
 // for flooding are in the flooding package.
 func TestFloodingTTL(t *testing.T) {
 
-	n1 := simulation.StartNewNode(uint32(1))
-	n2 := simulation.StartNewNode(uint32(2))
-	n3 := simulation.StartNewNode(uint32(3))
+	log := simulation.StartNewLogger()
+	defer log.WriteToHTML("_logs/TestFloodingTTL.html")
+
+	n1 := simulation.StartNewNodeLogged(uint32(1), log)
+	n2 := simulation.StartNewNodeLogged(uint32(2), log)
+	n3 := simulation.StartNewNodeLogged(uint32(3), log)
 
 	// Link nodes
 	n1.Link(n2)
@@ -126,47 +129,47 @@ func TestFloodingTTL(t *testing.T) {
 	}
 
 	// t1
-	n1.Router.OriginateFlooding(1, dh, []byte{0})
+	n1.Router.OriginateFlooding(1, dh, []byte("Hello!"))
 
 	select {
-	case <-n2.IncomingPackets:
+	case <-n2.LocalPackets:
 	case <-time.After(30 * time.Second):
 		t.Error("flooding packet never sent.")
 	}
 
 	// Check that no other packets were received
 	select {
-	case <-n1.IncomingPackets:
+	case <-n1.LocalPackets:
 		t.Error("received packet on n1 during t1")
-	case <-n2.IncomingPackets:
+	case <-n2.LocalPackets:
 		t.Error("received multiple packets on n2 during t1.")
-	case <-n3.IncomingPackets:
+	case <-n3.LocalPackets:
 		t.Error("received packet on n3 during t1, this means TTL was not considered.")
 	case <-time.After(1 * time.Second):
 	}
 
 	// t2
-	n1.Router.OriginateFlooding(2, dh, []byte{0})
+	n1.Router.OriginateFlooding(2, dh, []byte("Nope..."))
 
 	select {
-	case <-n2.IncomingPackets:
+	case <-n2.LocalPackets:
 	case <-time.After(10 * time.Second):
 		t.Error("flooding packet with TTL 2 did not reach 1 hop neighbor.")
 	}
 
 	select {
-	case <-n3.IncomingPackets:
+	case <-n3.LocalPackets:
 	case <-time.After(10 * time.Second):
 		t.Error("flooding packet with TTL 2 did not reach 2 hop neighbor")
 	}
 
 	// Check that no other packets were received
 	select {
-	case <-n1.IncomingPackets:
-		t.Error("received packet on n1 during t1")
-	case <-n2.IncomingPackets:
+	case <-n1.LocalPackets:
+		t.Error("received local packet on n1 during t1")
+	case <-n2.LocalPackets:
 		t.Error("received multiple packets on n2 during t1.")
-	case <-n3.IncomingPackets:
+	case <-n3.LocalPackets:
 		t.Error("received packet on n3 during t1, this means TTL was not considered.")
 	case <-time.After(1 * time.Second):
 	}
