@@ -1,3 +1,4 @@
+// TODO figure out channels so buffering is not needed.
 // BUG(lelandmiller@gmail.com): Due to issues with logger and channel buffers,
 // strange behavior occurs.
 package simulation
@@ -12,6 +13,8 @@ import (
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/pipeline"
 )
+
+const BUFFER_SIZE = 1000
 
 const TEMPLATE = `
 <html>
@@ -103,7 +106,7 @@ func StartNewNodeLogged(id uint32, log *Logger) *Node {
 	if log != nil {
 		// Intercept incoming for logging
 		oldIncoming := n.IncomingPackets
-		n.IncomingPackets = make(chan packet.Packet, 100)
+		n.IncomingPackets = make(chan packet.Packet, BUFFER_SIZE)
 		go func() {
 			for p := range oldIncoming {
 				fmt.Println(id, p)
@@ -141,7 +144,7 @@ func InterceptRouter(config *pipeline.Config) <-chan pipeline.Router {
 }
 
 func InterceptIncoming(config *pipeline.Config) chan packet.Packet {
-	ch := make(chan packet.Packet, 100)
+	ch := make(chan packet.Packet, BUFFER_SIZE)
 
 	prevParsePackets := config.ParsePackets
 
@@ -161,7 +164,7 @@ func InterceptIncoming(config *pipeline.Config) chan packet.Packet {
 
 // TODO careful about buffered channel size
 func InterceptLocal(config *pipeline.Config) <-chan packet.Packet {
-	ch := make(chan packet.Packet, 100)
+	ch := make(chan packet.Packet, BUFFER_SIZE)
 
 	config.LocalProcessing = func(destLocal <-chan packet.Packet, router pipeline.Router) {
 		go func() {
