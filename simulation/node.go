@@ -1,6 +1,9 @@
+// BUG(lelandmiller@gmail.com): Due to issues with logger and channel buffers,
+// strange behavior occurs.
 package simulation
 
 import (
+	"fmt"
 	"html/template"
 	"os"
 
@@ -100,9 +103,10 @@ func StartNewNodeLogged(id uint32, log *Logger) *Node {
 	if log != nil {
 		// Intercept incoming for logging
 		oldIncoming := n.IncomingPackets
-		n.IncomingPackets = make(chan packet.Packet)
+		n.IncomingPackets = make(chan packet.Packet, 100)
 		go func() {
 			for p := range oldIncoming {
+				fmt.Println(id, p)
 				log.in <- logEntry{id, p}
 				n.IncomingPackets <- p
 			}
