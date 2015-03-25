@@ -34,6 +34,8 @@ func newRouter(localID NodeID, out chan<- packet.Packet) *router {
 func (r *router) originate(o OriginationRequest) {
 	// Make packet
 	packet := newOriginationPacket(o)
+	packet.Header.Destination = proto.Uint32(uint32(o.Destination))
+	packet.Header.Source = proto.Uint32(uint32(r.localID))
 	// Check route cache for destination in packet header
 	route := r.routeCache.getRoute(o.Destination)
 	if route == nil {
@@ -94,7 +96,14 @@ func (r *router) forward(p packet.Packet) {
 		return
 	}
 	// TODO process route reply
-	r.sendAlongSourceRoute(&p)
+	r.processRouteReply(&p)
+
+	// Only forward if we were the receiver in the first place, broadcast not
+	// valid for source route anyway.
+	// TODO this should be anywhere where we respond on header options
+	if p.Preheader.Receiver == uint32(r.localID) {
+		r.sendAlongSourceRoute(&p)
+	}
 }
 
 func (r *router) sendAlongSourceRoute(p *packet.Packet) {
@@ -151,6 +160,32 @@ func processSourceRoute(p *packet.Packet) bool {
 	// TODO more stuff
 	// route maintainence
 	return true
+}
+
+// processRouteReply adds the route to our cache and searches for packets to
+// send with new route.
+func (r *router) processRouteReply(p *packet.Packet) {
+	rr := p.Header.DsrHeader.RouteReply
+	if rr == nil || *p.Header.Destination != uint32(r.localID) {
+		return
+	}
+
+	// convert TODO remove when removing NodeID type
+	nroute := make([]NodeID, 0, len(rr.Addresses)+1)
+	for _, a := range rr.Addresses {
+		nroute = append(nroute, NodeID(a))
+	}
+	nroute = append(nroute, NodeID(*p.Header.Source))
+	r.routeCache.addRoute(nroute, 0)
+
+	// Check send buffer
+	sendable := r.sendBuffer.getSendable(nroute)
+	for _, op := range sendable {
+
+		// Output packet
+		r.sendAlongSourceRoute(op)
+	}
+
 }
 
 // processRouteRequest is specified by section 8.2.2.
