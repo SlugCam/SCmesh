@@ -93,6 +93,8 @@ func (r *router) forward(p packet.Packet) {
 	if !cont {
 		return
 	}
+	// TODO process route reply
+	r.sendAlongSourceRoute(&p)
 }
 
 func (r *router) sendAlongSourceRoute(p *packet.Packet) {
@@ -109,6 +111,10 @@ func processSourceRoute(p *packet.Packet) bool {
 	// TODO more stuff
 	// decrement segments left
 	sr := p.Header.DsrHeader.SourceRoute
+	if sr == nil {
+		return false
+		// If no source route, quietly drop
+	}
 	segsLeft := *sr.SegsLeft
 
 	if segsLeft == 0 {
