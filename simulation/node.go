@@ -1,24 +1,90 @@
 package simulation
 
 import (
+	"html/template"
+	"os"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/config"
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/pipeline"
 )
 
+const TEMPLATE = `
+<html>
+<header><title>SCmesh Log</title></header>
+<body>
+<h1>SCmesh Log</h1>
+{{ range $key, $value := . }}
+<h2>{{ $key }}</h2>
+<ol>
+{{ range $p := $value }}
+<li>{{ $p }}</li>
+{{end}}
+</ol>
+{{ end }}
+</body>
+</html>
+`
+
+type logEntry struct {
+	id     uint32
+	packet packet.Packet
+}
+
+type Logger struct {
+	in   chan<- logEntry
+	data map[uint32][]packet.Packet
+}
+
+func StartNewLogger() *Logger {
+	l := new(Logger)
+	l.data = make(map[uint32][]packet.Packet)
+	ch := make(chan logEntry)
+	go func() {
+		for e := range ch {
+			l.data[e.id] = append(l.data[e.id], e.packet)
+		}
+	}()
+	l.in = ch
+	return l
+}
+
+func (l *Logger) WriteToHTML(path string) {
+	f, err := os.Create(path)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	defer f.Close()
+
+	tmpl, err := template.New("log").Parse(TEMPLATE)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	err = tmpl.Execute(f, l.data)
+	// TODO
+	f.Sync()
+}
+
 // Node is a simulated SlugCam mesh node. This is used in integration testing
 // and simulation. This struct should be created using the NewNode function.
 type Node struct {
 	Router          pipeline.Router
-	IncomingPackets <-chan packet.Packet
+	IncomingPackets chan packet.Packet
 	LocalPackets    <-chan packet.Packet
 	mockWiFly       *MockWiFly
+}
+
+func StartNewNode(id uint32) *Node {
+	return StartNewNodeLogged(id, nil)
 }
 
 // NewNode creates a new simulated node. It does this by creating a default
 // pipeline configuration and then intercepting several important data points.
 // The pipeline for this node will be started when calling this function.
-func StartNewNode(id uint32) *Node {
+func StartNewNodeLogged(id uint32, log *Logger) *Node {
 	n := new(Node)
 	n.mockWiFly = StartMockWiFly()
 	c := config.DefaultConfig(id, n.mockWiFly)
@@ -30,6 +96,19 @@ func StartNewNode(id uint32) *Node {
 	pipeline.Start(c)
 
 	n.Router = <-rch // r1 is now the router for node 1
+
+	if log != nil {
+		// Intercept incoming for logging
+		oldIncoming := n.IncomingPackets
+		n.IncomingPackets = make(chan packet.Packet)
+		go func() {
+			for p := range oldIncoming {
+				log.in <- logEntry{id, p}
+				n.IncomingPackets <- p
+			}
+		}()
+	}
+
 	return n
 }
 
@@ -57,7 +136,7 @@ func InterceptRouter(config *pipeline.Config) <-chan pipeline.Router {
 	return ch
 }
 
-func InterceptIncoming(config *pipeline.Config) <-chan packet.Packet {
+func InterceptIncoming(config *pipeline.Config) chan packet.Packet {
 	ch := make(chan packet.Packet, 100)
 
 	prevParsePackets := config.ParsePackets

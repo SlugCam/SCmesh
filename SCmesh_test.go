@@ -3,6 +3,7 @@ package main
 // TODO check timeouts, are they the best way to test these things?
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -17,12 +18,19 @@ import (
 	"github.com/SlugCam/SCmesh/util"
 )
 
-func TestDSROrigination(t *testing.T) {
+func TestMain(m *testing.M) {
+	os.Mkdir("_logs", 0755)
+	os.Exit(m.Run())
+}
 
-	n1 := simulation.StartNewNode(uint32(1))
-	n2 := simulation.StartNewNode(uint32(2))
-	n3 := simulation.StartNewNode(uint32(3))
-	n4 := simulation.StartNewNode(uint32(4))
+func TestDSROrigination(t *testing.T) {
+	log := simulation.StartNewLogger()
+	defer log.WriteToHTML("_logs/TestDSROrigination.html")
+
+	n1 := simulation.StartNewNodeLogged(uint32(1), log)
+	n2 := simulation.StartNewNodeLogged(uint32(2), log)
+	n3 := simulation.StartNewNodeLogged(uint32(3), log)
+	n4 := simulation.StartNewNodeLogged(uint32(4), log)
 
 	// Link nodes
 	n1.Link(n2)
@@ -67,8 +75,7 @@ func TestDSROrigination(t *testing.T) {
 	case <-time.After(10 * time.Second):
 	}
 
-	// TODO here
-	// n2 gets route request
+	// n2 gets route reply
 	select {
 	case p := <-n2.IncomingPackets:
 		if p.Header == nil || p.Header.DsrHeader == nil || p.Header.DsrHeader.RouteReply == nil {
@@ -76,6 +83,27 @@ func TestDSROrigination(t *testing.T) {
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("n2 did not receive route reply")
+	}
+
+	// n1 gets route request back
+	select {
+	case p := <-n1.IncomingPackets:
+		if p.Header == nil || p.Header.DsrHeader == nil || p.Header.DsrHeader.RouteRequest == nil {
+			t.Fatal("n1 received packet, but it was not a route request")
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("n1 did not receive route request back")
+	}
+
+	// TODO here
+	// n1 gets route reply
+	select {
+	case p := <-n1.IncomingPackets:
+		if p.Header == nil || p.Header.DsrHeader == nil || p.Header.DsrHeader.RouteReply == nil {
+			t.Fatal("n1 received packet, but it was not a route reply")
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("n1 did not receive route reply")
 	}
 }
 
