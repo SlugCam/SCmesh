@@ -96,6 +96,7 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan
 
 			// Route packet
 			if c.Header.GetDsrHeader() != nil {
+				localFromRouting <- c // This will be checked again before real local forwarding
 				// Then this is DSR
 				//c.Header.FloodingOptions = nil // Remove
 				r.forwardDSR <- c
