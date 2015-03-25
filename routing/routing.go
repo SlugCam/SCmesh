@@ -57,6 +57,23 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan
 
 	r := new(Router)
 
+	// localFromRouting
+	localFromRouting := make(chan packet.Packet)
+	go func() {
+		for c := range localFromRouting {
+			// Forward local data to destLocal
+			dh := c.Header.GetDataHeader()
+			if dh != nil {
+				for _, d := range dh.GetDestinations() {
+					if d == localID || d == BroadcastID {
+						destLocal <- c
+						break // otherwise could send local more than once
+					}
+				}
+			}
+		}
+	}()
+
 	// Make subrouters
 
 	// DSR
@@ -71,21 +88,11 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan
 	originateFlooding := make(chan flooding.OriginationRequest)
 	r.forwardFlooding = forwardFlooding
 	r.originateFlooding = originateFlooding
-	flooding.RoutePackets(localID, forwardFlooding, originateFlooding, out)
+	flooding.RoutePackets(localID, forwardFlooding, originateFlooding, localFromRouting, out)
 
+	// Send to routing functions
 	go func() {
 		for c := range toForward {
-
-			// Forward local data to destLocal
-			dh := c.Header.GetDataHeader()
-			if dh != nil {
-				for _, d := range dh.GetDestinations() {
-					if d == localID || d == BroadcastID {
-						destLocal <- c
-						break // otherwise could send local more than once
-					}
-				}
-			}
 
 			// Route packet
 			if c.Header.GetDsrHeader() != nil {
