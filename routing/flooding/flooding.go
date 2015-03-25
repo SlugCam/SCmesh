@@ -47,26 +47,42 @@ func processTTL(p *packet.Packet) bool {
 	}
 }
 
+type cacheEntry struct {
+	node   uint32 // originating node
+	id     uint32 // flooding id
+	offset uint32 // payload offset
+}
+
 // RoutePackets starts a goroutine that performs flooding routing functions.
 // None of the functions in the module check for the existence of a packet
 // header or a flooding header, this needs to be done by the routing module that
 // uses this function.
 // TODO check for used headers?
-func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, out chan<- packet.Packet) {
+func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, localOut chan<- packet.Packet, out chan<- packet.Packet) {
 	// TODO, should persist?
-	//encountered := make(map[string]bool)
+	encountered := make(map[cacheEntry]bool)
 	go func() {
 		for {
 			select {
 			case p := <-toForward:
-				// Add to cache based on id and offset
 
-				// Adjust TTL
-				forward := processTTL(&p)
+				test := cacheEntry{
+					*p.Header.Source,
+					*p.Header.FloodingHeader.PacketId,
+					p.Preheader.PayloadOffset,
+				}
 
-				// Forward
-				if forward {
-					out <- p
+				if !encountered[test] && *p.Header.Source != localID {
+					// Send to local
+					localOut <- p
+					// Add to cache based on id and offset
+					encountered[test] = true
+					// Adjust TTL
+					forward := processTTL(&p)
+					// Forward
+					if forward {
+						out <- p
+					}
 				}
 
 			case origReq := <-toOriginate:
