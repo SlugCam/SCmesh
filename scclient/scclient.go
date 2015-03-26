@@ -16,6 +16,7 @@ type PowerReq struct {
 }
 
 func main() {
+
 	getBattery()
 	/*
 		conn, err := net.Dial("unixpacket", "/tmp/sc")
@@ -60,8 +61,8 @@ func getBattery() {
 		return
 	}
 
-	fmt.Fprintf(conn, "%s\n", b)
-	status, err := bufio.NewReader(conn).ReadString('\n')
-	fmt.Println("RETURN:", status)
+	fmt.Fprintf(conn, "%s\r", b) // NOTE could change to \n?
+	status, err := bufio.NewReader(conn).ReadString('\r')
 
+	fmt.Println("RETURN:", status)
 }
