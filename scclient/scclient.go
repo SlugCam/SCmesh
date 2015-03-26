@@ -10,6 +10,7 @@ import (
 )
 
 const POWER_SOCKET = "/tmp/paunix.str"
+const SCMESH_CTRL = "/tmp/scmeshctrl.str"
 
 const HELP = `help - print this message
 batt - print battery life
@@ -44,6 +45,8 @@ func main() {
 		switch args[0] {
 		case "help":
 			fmt.Fprintf(os.Stderr, HELP)
+		case "ping":
+			ping()
 		case "batt":
 			getBattery()
 		default:
@@ -66,23 +69,6 @@ func main() {
 		status, err := bufio.NewReader(conn).ReadString('\n')
 	*/
 }
-
-/*
-func serve() {
-
-	ln, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		// handle error
-	}
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			// handle error
-		}
-		//go handleConnection(conn)
-	}
-}
-*/
 
 func getBattery() {
 	r := PowerReq{
@@ -112,4 +98,31 @@ func getBattery() {
 	}
 
 	fmt.Println("RETURN:", jpow)
+}
+
+const PING = `
+{
+	"command": "ping"
+}
+`
+
+func ping() {
+	conn, err := net.Dial("unix", SCMESH_CTRL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error opening power socket: %s\n", err)
+		return
+	}
+
+	fmt.Fprintf(conn, PING) // NOTE could change to \n?
+	/*status, err := bufio.NewReader(conn).ReadBytes('\r')
+
+	jpow := new(map[string]interface{})
+	err = json.Unmarshal(status, jpow)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error marshalling request to json: %s\n", err)
+		return
+	}
+
+	fmt.Println("RETURN:", jpow)
+	*/
 }

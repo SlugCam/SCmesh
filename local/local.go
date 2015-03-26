@@ -1,10 +1,9 @@
 package local
 
 import (
-	"bufio"
-	"io"
+	"encoding/json"
+	"fmt"
 	"net"
-	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -16,7 +15,35 @@ import (
 	"github.com/SlugCam/SCmesh/routing"
 )
 
+const SCMESH_CTRL = "/tmp/scmeshctrl.str"
+
+type Command struct {
+	Command  string
+	DataType string
+	Options  *json.RawMessage
+	Data     *json.RawMessage
+}
+
+type PingOptions struct {
+	Destination uint32
+	TTL         uint32
+}
+
 func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
+	mchan := make(chan Command)
+	listenClients(SCMESH_CTRL, mchan)
+
+	go func() {
+		for m := range mchan {
+			switch m.Command {
+			case "ping":
+				log.Info("ping request received.")
+			}
+			fmt.Println(m)
+
+		}
+	}()
+
 	go func() {
 		for c := range in {
 			log.Info("Packet received:", c)
@@ -37,7 +64,7 @@ func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 }
 
 // TODO should only accept from localhost
-func listenClients(port string, mchan chan<- string) {
+func listenClients(port string, mchan chan<- Command) {
 	// TODO could change to unix socket
 	ln, err := net.Listen("unix", port)
 	if err != nil {
@@ -59,20 +86,35 @@ func listenClients(port string, mchan chan<- string) {
 
 // TODO terminate gracefully
 // TODO determine if trimming behavior is correct
-func handleConnection(c net.Conn, mchan chan<- string) {
-	reader := bufio.NewReader(c)
+func handleConnection(c net.Conn, mchan chan<- Command) {
+	dec := json.NewDecoder(c)
+	//enc := json.NewEncoder(c)
 	for {
-		reply, err := reader.ReadBytes('\n')
+		comm := new(Command)
+		err := dec.Decode(comm)
 		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				log.WithFields(log.Fields{
-					"error": err,
-				}).Error("Error in TCP command connection")
-			}
+			log.Error("control connection error: ", err)
+			break
 		}
-		mchan <- strings.Trim(string(reply), "\n\r ")
+		mchan <- *comm
 	}
+
+	/*
+		reader := bufio.NewReader(c)
+		for {
+			reply, err := reader.ReadBytes('\n')
+			if err != nil {
+				if err == io.EOF {
+					break
+				} else {
+					log.WithFields(log.Fields{
+						"error": err,
+					}).Error("Error in TCP command connection")
+				}
+			}
+			// mchan <- strings.Trim(string(reply), "\n\r ")
+			mchan <- reply
+		}
+	*/
 	c.Close()
 }
