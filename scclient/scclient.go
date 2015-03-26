@@ -17,7 +17,10 @@ type PowerReq struct {
 
 func main() {
 
-	getBattery()
+	lineScanner := bufio.NewScanner(os.Stdin)
+	for lineScanner.Scan() {
+		getBattery()
+	}
 	/*
 		conn, err := net.Dial("unixpacket", "/tmp/sc")
 		//check error TODO
