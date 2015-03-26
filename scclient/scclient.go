@@ -104,7 +104,7 @@ func getBattery() {
 	fmt.Fprintf(conn, "%s\r", b) // NOTE could change to \n?
 	status, err := bufio.NewReader(conn).ReadBytes('\r')
 
-	jpow := new(PowerResp)
+	jpow := new(map[string]interface{})
 	err = json.Unmarshal(status, jpow)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error marshalling request to json: %s\n", err)
