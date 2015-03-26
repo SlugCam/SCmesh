@@ -20,6 +20,11 @@ type PowerReq struct {
 	Data string `json:"data"`
 }
 
+type PowerResp struct {
+	Type string `json:"type"`
+	Data string `json:"data"`
+}
+
 func main() {
 	fmt.Fprintf(os.Stderr, "scclient, enter help to see help\n")
 
@@ -97,7 +102,10 @@ func getBattery() {
 	}
 
 	fmt.Fprintf(conn, "%s\r", b) // NOTE could change to \n?
-	status, err := bufio.NewReader(conn).ReadString('\r')
+	status, err := bufio.NewReader(conn).ReadBytes('\r')
 
-	fmt.Println("RETURN:", status)
+	jpow := new(PowerResp)
+	json.Unmarshal(status, jpow)
+
+	fmt.Println("RETURN:", jpow)
 }
