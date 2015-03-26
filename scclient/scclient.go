@@ -21,8 +21,8 @@ type PowerReq struct {
 }
 
 type PowerResp struct {
-	Type string `json:"type"`
-	Data string `json:"data"`
+	Type string      `json:"type"`
+	Data interface{} `json:"data,string"`
 }
 
 func main() {
