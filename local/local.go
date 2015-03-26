@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"io"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
@@ -38,10 +37,9 @@ func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 }
 
 // TODO should only accept from localhost
-func listenClients(port int, mchan chan<- string) {
+func listenClients(port string, mchan chan<- string) {
 	// TODO could change to unix socket
-	// ln, err := net.Listen("tcp", "localhost:8080")
-	ln, err := net.Listen("tcp", strings.Join([]string{"localhost:", strconv.Itoa(port)}, ""))
+	ln, err := net.Listen("unix", port)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,9 +47,11 @@ func listenClients(port int, mchan chan<- string) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
+
 			log.WithFields(log.Fields{
 				"error": err,
 			}).Fatal("Error in TCP command connection listener")
+
 		}
 		go handleConnection(conn, mchan)
 	}

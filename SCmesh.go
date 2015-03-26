@@ -15,7 +15,7 @@ func main() {
 
 	// Parse command flags
 	_ = flag.Int("port", 8080, "the port on which to listen for control messages")
-	localID := flag.Int("local-id", 0, "the id number for this node, sinks are 0")
+	localID := flag.Int("id", 0, "the id number for this node, sinks are 0")
 	debug := flag.Bool("debug", false, "print debug level log messages")
 	flag.Parse()
 

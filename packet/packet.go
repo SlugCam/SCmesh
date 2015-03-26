@@ -155,6 +155,7 @@ func ParsePackets(in <-chan RawPacket, out chan<- Packet) {
 				log.Error("Packet dropped during parsing.", err)
 			} else {
 				out <- p
+				log.Debug("Parsed:", p)
 			}
 		}
 	}()
