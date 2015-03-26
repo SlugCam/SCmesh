@@ -6,9 +6,14 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 const POWER_SOCKET = "/tmp/paunix.str"
+
+const HELP = `help - print this message
+batt - print battery life
+`
 
 type PowerReq struct {
 	Type string `json:"type"`
@@ -16,10 +21,30 @@ type PowerReq struct {
 }
 
 func main() {
+	fmt.Fprintf(os.Stderr, "scclient, enter help to see help\n")
 
-	lineScanner := bufio.NewScanner(os.Stdin)
-	for lineScanner.Scan() {
-		getBattery()
+	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Print("> ")
+	for scanner.Scan() {
+		command := scanner.Text()
+		args := strings.Fields(command)
+		// If no arguments skip
+		if len(args) == 0 {
+			continue
+		}
+		// Skip comment line
+		if args[0][0] == '#' {
+			continue
+		}
+		switch args[0] {
+		case "help":
+			fmt.Fprintf(os.Stderr, HELP)
+		case "batt":
+			getBattery()
+		default:
+			fmt.Fprintf(os.Stderr, "command \"%s\" not recognized\n", command)
+		}
+		fmt.Print("> ")
 	}
 	/*
 		conn, err := net.Dial("unixpacket", "/tmp/sc")
