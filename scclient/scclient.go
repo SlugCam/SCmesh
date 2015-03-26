@@ -21,6 +21,13 @@ func main() {
 	for lineScanner.Scan() {
 		getBattery()
 	}
+
+	err := scanner.Err()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error scanning stdin:", err)
+		os.Exit(1)
+	}
+
 	/*
 		conn, err := net.Dial("unixpacket", "/tmp/sc")
 		//check error TODO
