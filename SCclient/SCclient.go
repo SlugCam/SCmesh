@@ -113,6 +113,7 @@ func ping() {
 		return
 	}
 
+	fmt.Printf(PING)
 	fmt.Fprintf(conn, PING) // NOTE could change to \n?
 	/*status, err := bufio.NewReader(conn).ReadBytes('\r')
 
