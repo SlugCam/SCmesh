@@ -45,9 +45,9 @@ func main() {
 		switch args[0] {
 		case "help":
 			fmt.Fprintf(os.Stderr, HELP)
-		case "flood-ping":
+		case "ping-flood":
 			ping(true)
-		case "dsr-flood":
+		case "ping-dsr":
 			ping(false)
 		case "batt":
 			getBattery()
@@ -63,13 +63,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	/*
-		conn, err := net.Dial("unixpacket", "/tmp/sc")
-		//check error TODO
-		fmt.Println("Hello")
-		fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
-		status, err := bufio.NewReader(conn).ReadString('\n')
-	*/
 }
 
 func getBattery() {
@@ -88,6 +81,7 @@ func getBattery() {
 		fmt.Fprintf(os.Stderr, "error opening power socket: %s\n", err)
 		return
 	}
+	defer conn.Close()
 
 	fmt.Fprintf(conn, "%s\r", b) // NOTE could change to \n?
 	status, err := bufio.NewReader(conn).ReadBytes('\r')
@@ -100,36 +94,4 @@ func getBattery() {
 	}
 
 	fmt.Println("RETURN:", jpow)
-}
-
-const DSR_PING = `
-{
-	"command": "dsr-ping",
-	"options": {
-		"destination": 0
-	}
-}
-`
-const FLOOD_PING = `
-{
-	"command": "flood-ping",
-	"options": {
-		"TTL": 255
-	}
-}
-`
-
-func ping(flood bool) {
-	conn, err := net.Dial("unix", SCMESH_CTRL)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error opening power socket: %s\n", err)
-		return
-	}
-
-	if flood {
-		fmt.Fprintf(conn, FLOOD_PING)
-	} else {
-		fmt.Fprintf(conn, DSR_PING)
-
-	}
 }
