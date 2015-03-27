@@ -24,9 +24,10 @@ func TestPacketCreation(t *testing.T) {
 
 	toForward := make(chan packet.Packet)
 	out := make(chan packet.Packet)
+	local := make(chan packet.Packet)
 	toOriginate := make(chan OriginationRequest)
 
-	RoutePackets(localID, toForward, toOriginate, out)
+	RoutePackets(localID, toForward, toOriginate, local, out)
 
 	// Originate packet
 	toOriginate <- OriginationRequest{

@@ -1,6 +1,16 @@
 package escrow
 
-import "time"
+import (
+	"path"
+	"time"
+
+	"github.com/SlugCam/SCmesh/util"
+)
+
+const (
+	//PATH_PREFIX          = "/var/SlugCam/SCmesh"
+	MESSAGE_COUNTER_PATH = "message_counter"
+)
 
 const (
 	REQUEST_BUFFER_SIZE = 100
@@ -18,41 +28,72 @@ const (
 	VIDEO_REQUEST
 )
 
-type Distributor struct {
-	requests chan<- sendRequest
-	timeouts chan<- int // send filenumber to check
-	active   []File     // Active entries
+type request interface {
+	processRequest(d *Distributor)
 }
 
-type File struct {
+type messageRequest struct {
+	fileID uint32
 	data   []byte
-	bitmap []bool     // contains acknowledged bitmap
-	timer  time.Timer // Timer contains the resend timeout
+	dest   uint32
 }
 
-type sendRequest struct {
-	reqType int    // Either MESSAGE_REQUEST or VIDEO_REQUEST
-	data    []byte // JSON or path for message or video respectively
-	dest    uint32 // The node to send to
-}
-
-func (d *Distributor) RegisterMessage(dest uint32, message []byte) {
-	d.requests <- sendRequest{
-		reqType: MESSAGE_REQUEST,
-		data:    message,
-		dest:    dest,
-	}
-
-}
-
-func (d *Distributor) processSendRequest(r sendRequest) {
+func (r messageRequest) processRequest(d *Distributor) {
 	// Make new file entry
+
+	// Write message to message file
+
+	// Encode file to a new file
 
 	// Run send remaining on entry
 
 }
 
-func (d *Distributor) RegisterFile() {
+/*
+type videoRequest struct {
+	path string
+	dest uint32
+}
+
+func (r videoRequest) processRequest(d *Distributor) {
+	// Make new file entry
+
+	// Run send remaining on entry
+
+}
+*/
+
+type Distributor struct {
+	requests  chan<- request
+	timeouts  chan<- int // send filenumber to check
+	active    []file     // Active entries
+	messageID <-chan uint32
+}
+
+type file struct {
+	fileType int
+	data     []byte
+	bitmap   []bool     // contains acknowledged bitmap
+	timer    time.Timer // Timer contains the resend timeout
+}
+
+// RegisterMessage signals a desire to send a given message. It will return with
+// the file ID for the new message so we can keep track of it later.
+func (d *Distributor) RegisterMessage(dest uint32, message []byte) uint32 {
+	id := <-d.messageID
+	d.requests <- messageRequest{
+		data:   message,
+		dest:   dest,
+		fileID: id,
+	}
+	return id
+}
+
+// RegisterVideo signals a desire to send the video given by the path. It is
+// assumed that the videos name will be a unix timestamp as has already been
+// done in the SlugCam system.
+// TODO deletion
+func (d *Distributor) RegisterVideo(dest uint32, path string) {
 
 }
 
@@ -75,22 +116,24 @@ func (d *Distributor) receiveACK(ack ACK) {
 	// if not reset timout timer
 }
 
-func Distribute(incomingACKs <-chan ACK) *Distributor {
+func Distribute(pathPrefix string, incomingACKs <-chan ACK) *Distributor {
 	d := new(Distributor)
 
-	requests := make(chan sendRequest)
+	requests := make(chan request, REQUEST_BUFFER_SIZE)
 	d.requests = requests
 
-	timeouts := make(chan int)
+	timeouts := make(chan int, TIMEOUT_BUFFER_SIZE)
 	d.timeouts = timeouts
 	// load entries from storage
+
+	d.messageID = util.RunCounterUint32(path.Join(pathPrefix, MESSAGE_COUNTER_PATH))
 
 	go func() {
 		for {
 			select {
 			case rr := <-requests:
-				d.processSendRequest(rr)
-			// Registration requests
+				// Registration requests
+				rr.processRequest(d)
 
 			case ack := <-incomingACKs:
 				// Acknowledgement received
