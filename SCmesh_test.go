@@ -41,6 +41,7 @@ func TestDSROrigination(t *testing.T) {
 	dh := header.DataHeader{
 		FileId:       proto.Uint32(1),
 		Destinations: []uint32{routing.BroadcastID},
+		Type:         header.DataHeader_MESSAGE.Enum(),
 	}
 
 	// t1
@@ -126,6 +127,7 @@ func TestFloodingTTL(t *testing.T) {
 	dh := header.DataHeader{
 		FileId:       proto.Uint32(1),
 		Destinations: []uint32{routing.BroadcastID},
+		Type:         header.DataHeader_MESSAGE.Enum(),
 	}
 
 	// t1
