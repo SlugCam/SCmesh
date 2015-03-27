@@ -1,0 +1,5 @@
+package escrow
+
+func Distribute() {
+
+}
