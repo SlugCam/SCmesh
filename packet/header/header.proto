@@ -21,7 +21,11 @@ message FloodingHeader {
 message DataHeader {
     required uint32 file_id = 1;
     repeated uint32 destinations = 2 [packed=true];
-    //required uint32 
+    enum Type {
+        MESSAGE = 0;
+    }
+    required Type type = 3;
+
 }
 
 message DSRHeader {

@@ -58,6 +58,7 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan
 	r := new(Router)
 
 	// localFromRouting
+	// TODO remove magic
 	localFromRouting := make(chan packet.Packet)
 	go func() {
 		for c := range localFromRouting {

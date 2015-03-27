@@ -8,6 +8,8 @@ import (
 	"github.com/SlugCam/SCmesh/packet/header"
 )
 
+const BUFFER_SIZE = 1000
+
 type Router interface {
 	OriginateDSR(dest uint32, dataHeader header.DataHeader, data []byte)
 	OriginateFlooding(TTL int, dataHeader header.DataHeader, data []byte)
@@ -28,11 +30,11 @@ func Start(c Config) {
 	log.Info("Starting SCmesh")
 
 	// Make channels
-	rawPackets := make(chan packet.RawPacket)
-	toRouter := make(chan packet.Packet)
-	destLocal := make(chan packet.Packet)
-	fromRouter := make(chan packet.Packet)
-	packedPackets := make(chan []byte)
+	rawPackets := make(chan packet.RawPacket, BUFFER_SIZE)
+	toRouter := make(chan packet.Packet, BUFFER_SIZE)
+	destLocal := make(chan packet.Packet, BUFFER_SIZE)
+	fromRouter := make(chan packet.Packet, BUFFER_SIZE)
+	packedPackets := make(chan []byte, BUFFER_SIZE)
 
 	// Setup pipeline
 	c.Prefilter(c.Serial, rawPackets)

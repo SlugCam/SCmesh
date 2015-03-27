@@ -23,6 +23,36 @@ import math "math"
 var _ = proto.Marshal
 var _ = math.Inf
 
+type DataHeader_Type int32
+
+const (
+	DataHeader_MESSAGE DataHeader_Type = 0
+)
+
+var DataHeader_Type_name = map[int32]string{
+	0: "MESSAGE",
+}
+var DataHeader_Type_value = map[string]int32{
+	"MESSAGE": 0,
+}
+
+func (x DataHeader_Type) Enum() *DataHeader_Type {
+	p := new(DataHeader_Type)
+	*p = x
+	return p
+}
+func (x DataHeader_Type) String() string {
+	return proto.EnumName(DataHeader_Type_name, int32(x))
+}
+func (x *DataHeader_Type) UnmarshalJSON(data []byte) error {
+	value, err := proto.UnmarshalJSONEnum(DataHeader_Type_value, data, "DataHeader_Type")
+	if err != nil {
+		return err
+	}
+	*x = DataHeader_Type(value)
+	return nil
+}
+
 type Header struct {
 	Source           *uint32         `protobuf:"varint,1,req,name=source" json:"source,omitempty"`
 	Destination      *uint32         `protobuf:"varint,7,opt,name=destination" json:"destination,omitempty"`
@@ -104,9 +134,10 @@ func (m *FloodingHeader) GetPacketId() uint32 {
 }
 
 type DataHeader struct {
-	FileId           *uint32  `protobuf:"varint,1,req,name=file_id" json:"file_id,omitempty"`
-	Destinations     []uint32 `protobuf:"varint,2,rep,packed,name=destinations" json:"destinations,omitempty"`
-	XXX_unrecognized []byte   `json:"-"`
+	FileId           *uint32          `protobuf:"varint,1,req,name=file_id" json:"file_id,omitempty"`
+	Destinations     []uint32         `protobuf:"varint,2,rep,packed,name=destinations" json:"destinations,omitempty"`
+	Type             *DataHeader_Type `protobuf:"varint,3,req,name=type,enum=header.DataHeader_Type" json:"type,omitempty"`
+	XXX_unrecognized []byte           `json:"-"`
 }
 
 func (m *DataHeader) Reset()         { *m = DataHeader{} }
@@ -125,6 +156,13 @@ func (m *DataHeader) GetDestinations() []uint32 {
 		return m.Destinations
 	}
 	return nil
+}
+
+func (m *DataHeader) GetType() DataHeader_Type {
+	if m != nil && m.Type != nil {
+		return *m.Type
+	}
+	return DataHeader_MESSAGE
 }
 
 type DSRHeader struct {
@@ -357,4 +395,5 @@ func (m *DSRHeader_SourceRoute) GetAddresses() []uint32 {
 }
 
 func init() {
+	proto.RegisterEnum("header.DataHeader_Type", DataHeader_Type_name, DataHeader_Type_value)
 }

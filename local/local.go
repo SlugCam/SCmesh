@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
@@ -29,6 +30,8 @@ type PingOptions struct {
 	TTL         uint32
 }
 
+const PING = `{"id":0,"cam":"test","time":0,"type":"ping","data":{}}`
+
 func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 	mchan := make(chan Command)
 	listenClients(SCMESH_CTRL, mchan)
@@ -43,8 +46,10 @@ func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 				dh := header.DataHeader{
 					FileId:       proto.Uint32(0),
 					Destinations: []uint32{routing.BroadcastID},
+					Type:         header.DataHeader_MESSAGE.Enum(),
 				}
-				router.OriginateFlooding(20, dh, []byte("Ping!!!"))
+
+				router.OriginateFlooding(20, dh, []byte(PING))
 			}
 			fmt.Println(m)
 
@@ -62,6 +67,7 @@ func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 // TODO should only accept from localhost
 func listenClients(port string, mchan chan<- Command) {
 	go func() {
+		os.Remove(port)
 		// TODO could change to unix socket
 		ln, err := net.Listen("unix", port)
 		if err != nil {
