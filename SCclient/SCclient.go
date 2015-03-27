@@ -45,8 +45,10 @@ func main() {
 		switch args[0] {
 		case "help":
 			fmt.Fprintf(os.Stderr, HELP)
-		case "ping":
-			ping()
+		case "flood-ping":
+			ping(true)
+		case "dsr-flood":
+			ping(false)
 		case "batt":
 			getBattery()
 		default:
@@ -100,30 +102,34 @@ func getBattery() {
 	fmt.Println("RETURN:", jpow)
 }
 
-const PING = `
+const DSR_PING = `
 {
-	"command": "ping"
+	"command": "dsr-ping",
+	"options": {
+		"destination": 0
+	}
+}
+`
+const FLOOD_PING = `
+{
+	"command": "flood-ping",
+	"options": {
+		"TTL": 255
+	}
 }
 `
 
-func ping() {
+func ping(flood bool) {
 	conn, err := net.Dial("unix", SCMESH_CTRL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error opening power socket: %s\n", err)
 		return
 	}
 
-	fmt.Printf(PING)
-	fmt.Fprintf(conn, PING) // NOTE could change to \n?
-	/*status, err := bufio.NewReader(conn).ReadBytes('\r')
+	if flood {
+		fmt.Fprintf(conn, FLOOD_PING)
+	} else {
+		fmt.Fprintf(conn, DSR_PING)
 
-	jpow := new(map[string]interface{})
-	err = json.Unmarshal(status, jpow)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error marshalling request to json: %s\n", err)
-		return
 	}
-
-	fmt.Println("RETURN:", jpow)
-	*/
 }

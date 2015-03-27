@@ -6,10 +6,12 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 
+	"github.com/SlugCam/SCmesh/gateway"
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/SlugCam/SCmesh/pipeline"
@@ -21,16 +23,35 @@ const SCMESH_CTRL = "/tmp/scmeshctrl.str"
 type Command struct {
 	Command  string
 	DataType string
-	Options  *json.RawMessage
-	Data     *json.RawMessage
+	Options  json.RawMessage
+	Data     json.RawMessage
 }
 
 type PingOptions struct {
 	Destination uint32
-	TTL         uint32
+	TTL         int
 }
 
 const PING = `{"id":0,"cam":"test","time":0,"type":"ping","data":{}}`
+
+func MakePingPacket(localID uint32) (dh header.DataHeader, b []byte, err error) {
+
+	dh = header.DataHeader{
+		FileId:       proto.Uint32(0),
+		Destinations: []uint32{routing.BroadcastID},
+		Type:         header.DataHeader_MESSAGE.Enum(),
+	}
+	pingM := &gateway.OutboundMessage{
+		Id:   0,
+		Cam:  fmt.Sprintf("%d", localID),
+		Time: time.Now(),
+		Type: "ping",
+	}
+	b, err = json.Marshal(pingM)
+	log.Debug("pingpacket:", string(b))
+
+	return
+}
 
 func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 	mchan := make(chan Command)
@@ -41,15 +62,32 @@ func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 		for m := range mchan {
 			log.Debug("Received message in LocalProcessing")
 			switch m.Command {
-			case "ping":
+			case "flood-ping":
+				var po PingOptions
+				err := json.Unmarshal(m.Options, &po)
+				if err != nil {
+					log.Error("error parsing control message:", err)
+				}
 				log.Info("ping request received.")
-				dh := header.DataHeader{
-					FileId:       proto.Uint32(0),
-					Destinations: []uint32{routing.BroadcastID},
-					Type:         header.DataHeader_MESSAGE.Enum(),
+				dh, d, err := MakePingPacket(router.LocalID())
+				if err != nil {
+					log.Error("error creating ping packet:", err)
 				}
 
-				router.OriginateFlooding(20, dh, []byte(PING))
+				router.OriginateFlooding(po.TTL, dh, d)
+			case "dsr-ping":
+				log.Info("ping request received.")
+				var po PingOptions
+				err := json.Unmarshal(m.Options, &po)
+				if err != nil {
+					log.Error("error parsing control message:", err)
+				}
+
+				dh, d, err := MakePingPacket(router.LocalID())
+				if err != nil {
+					log.Error("error creating ping packet:", err)
+				}
+				router.OriginateDSR(po.Destination, dh, d)
 			}
 			fmt.Println(m)
 

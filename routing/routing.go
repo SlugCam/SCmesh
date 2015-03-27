@@ -17,10 +17,15 @@ const BroadcastID = uint32(0xFFFF)
 // Router is the structure created when we call RoutePackets. It provides
 // methods to originate packets.
 type Router struct {
+	localID           uint32
 	forwardDSR        chan<- packet.Packet
 	originateDSR      chan<- dsr.OriginationRequest
 	forwardFlooding   chan<- packet.Packet
 	originateFlooding chan<- flooding.OriginationRequest
+}
+
+func (r *Router) LocalID() uint32 {
+	return r.localID
 }
 
 // OriginateDSR sends data using the DSR routing scheme. Not that as with
@@ -56,6 +61,7 @@ func (r *Router) OriginateFlooding(TTL int, dataHeader header.DataHeader, data [
 func RoutePackets(localID uint32, toForward <-chan packet.Packet, destLocal chan<- packet.Packet, out chan<- packet.Packet) pipeline.Router {
 
 	r := new(Router)
+	r.localID = localID
 
 	// localFromRouting
 	// TODO remove magic
