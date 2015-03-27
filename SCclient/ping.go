@@ -8,7 +8,7 @@ import (
 
 const DSR_PING = `
 {
-	"command": "dsr-ping",
+	"command": "ping-dsr",
 	"options": {
 		"destination": 0
 	}
@@ -16,7 +16,7 @@ const DSR_PING = `
 `
 const FLOOD_PING = `
 {
-	"command": "flood-ping",
+	"command": "ping-flood",
 	"options": {
 		"TTL": 255
 	}

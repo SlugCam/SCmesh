@@ -7,7 +7,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/config"
-	"github.com/SlugCam/SCmesh/gateway"
+	"github.com/SlugCam/SCmesh/local/gateway"
 	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/tarm/serial"
 )

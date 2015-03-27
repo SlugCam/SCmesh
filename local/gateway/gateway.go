@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"time"
@@ -12,18 +11,6 @@ import (
 	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/SlugCam/SCmesh/pipeline"
 )
-
-type Command struct {
-	Command  string
-	DataType string
-	Options  *json.RawMessage
-	Data     *json.RawMessage
-}
-
-type PingOptions struct {
-	Destination uint32
-	TTL         uint32
-}
 
 type OutboundMessage struct {
 	Id   int          `json:"id"`
