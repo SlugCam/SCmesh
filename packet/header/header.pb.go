@@ -27,13 +27,19 @@ type DataHeader_Type int32
 
 const (
 	DataHeader_MESSAGE DataHeader_Type = 0
+	DataHeader_VIDEO   DataHeader_Type = 1
+	DataHeader_ACK     DataHeader_Type = 2
 )
 
 var DataHeader_Type_name = map[int32]string{
 	0: "MESSAGE",
+	1: "VIDEO",
+	2: "ACK",
 }
 var DataHeader_Type_value = map[string]int32{
 	"MESSAGE": 0,
+	"VIDEO":   1,
+	"ACK":     2,
 }
 
 func (x DataHeader_Type) Enum() *DataHeader_Type {
@@ -134,7 +140,7 @@ func (m *FloodingHeader) GetPacketId() uint32 {
 }
 
 type DataHeader struct {
-	FileId           *uint32          `protobuf:"varint,1,req,name=file_id" json:"file_id,omitempty"`
+	FileId           *uint32          `protobuf:"varint,1,opt,name=file_id" json:"file_id,omitempty"`
 	Destinations     []uint32         `protobuf:"varint,2,rep,packed,name=destinations" json:"destinations,omitempty"`
 	Type             *DataHeader_Type `protobuf:"varint,3,req,name=type,enum=header.DataHeader_Type" json:"type,omitempty"`
 	XXX_unrecognized []byte           `json:"-"`

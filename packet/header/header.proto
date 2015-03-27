@@ -19,13 +19,14 @@ message FloodingHeader {
 }
 
 message DataHeader {
-    required uint32 file_id = 1;
+    optional uint32 file_id = 1;
     repeated uint32 destinations = 2 [packed=true];
     enum Type {
         MESSAGE = 0;
+        VIDEO = 1;
+        ACK = 2;
     }
     required Type type = 3;
-
 }
 
 message DSRHeader {
