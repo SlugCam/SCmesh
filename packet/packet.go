@@ -104,7 +104,11 @@ func (p *Packet) Pack(out chan<- []byte) {
 		b = append(b, '\x04') // Section delimiter
 
 		out <- b
-		log.Debug("Sending this raw packet:", b)
+		log.Debug("Sending this packet: %+v", struct {
+			Preheader Preheader
+			Header    *header.Header
+			Data      []byte
+		}{newPreheader, p.Header, payloadSlice})
 
 		if nextOffset == payloadLen {
 			break
