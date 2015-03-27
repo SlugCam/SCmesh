@@ -135,7 +135,6 @@ func handleConnection(c net.Conn, mchan chan<- Command) {
 		log.Debug("handleConnection running")
 		comm := new(Command)
 		err := dec.Decode(comm)
-		log.Debug("Decoded:", comm)
 		if err != nil {
 			if err != io.EOF {
 				log.Error("control connection error: ", err)
