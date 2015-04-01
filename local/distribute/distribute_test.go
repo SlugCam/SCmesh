@@ -1,4 +1,4 @@
-package escrow
+package distribute
 
 /*
 func TestRegistration(t *testing.T) {

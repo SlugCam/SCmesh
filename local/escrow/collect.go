@@ -1,5 +1,0 @@
-package escrow
-
-func Collect() {
-
-}

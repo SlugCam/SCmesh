@@ -1,4 +1,4 @@
-package escrow
+package distribute
 
 // Fix when IDs are rolled over, create will fail and drop data
 
@@ -304,6 +304,8 @@ func Distribute(pathPrefix string, router pipeline.Router, incomingACKs <-chan A
 	d.metaPath = path.Join(pathPrefix, META_PATH)
 	d.outPath = path.Join(pathPrefix, OUT_PATH)
 	d.storePath = path.Join(pathPrefix, STORE_PATH)
+
+	d.router = router
 
 	counterPath := path.Join(pathPrefix, COUNTER_PATH)
 

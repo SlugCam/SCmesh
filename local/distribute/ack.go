@@ -1,4 +1,4 @@
-package escrow
+package distribute
 
 import (
 	"github.com/SlugCam/SCmesh/packet/header"
