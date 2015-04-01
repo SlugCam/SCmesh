@@ -5,7 +5,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"strconv"
 )
+
+func Utoa(x uint32) string {
+	return strconv.Itoa(int(x))
+}
 
 func RandomUint32() uint32 {
 	b := make([]byte, 4)

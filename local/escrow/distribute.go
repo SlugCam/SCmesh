@@ -1,15 +1,30 @@
 package escrow
 
+// Fix when IDs are rolled over, create will fail and drop data
+
+// TODO how can we cleanup the file system?
+// TODO prioritize resends for messages?
+
 import (
+	"encoding/gob"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"path"
 	"time"
 
 	"github.com/SlugCam/SCmesh/util"
 )
 
+// These path constants will be relative to the prefix provided to the
+// distribute function.
 const (
 	//PATH_PREFIX          = "/var/SlugCam/SCmesh"
-	MESSAGE_COUNTER_PATH = "message_counter"
+	COUNTER_PATH = "count"
+	STORE_PATH   = "store"
+	OUT_PATH     = "out"
+	META_PATH    = "meta"
 )
 
 const (
@@ -23,87 +38,143 @@ const (
 	ACK_TIMEOUT   = 10 * time.Second
 )
 
-const (
-	MESSAGE_REQUEST = iota
-	VIDEO_REQUEST
-)
-
-type request interface {
-	processRequest(d *Distributor)
+// RegistrationRequest contains the data necessary to register a file to send.
+type RegistrationRequest struct {
+	DataType    string           `json:"type"`
+	Destination uint32           `json:"destination"`
+	Timestamp   time.Time        `json:"timestamp"`
+	JSON        *json.RawMessage `json:"json"`
+	Path        string           `json:"path"`
+	Save        bool             `json:"save"`
 }
 
-type messageRequest struct {
-	fileID uint32
-	data   []byte
-	dest   uint32
-}
+// meta contains the metadata for an outbound request.
+type meta struct {
+	ID   uint32
+	Size uint32
 
-func (r messageRequest) processRequest(d *Distributor) {
-	// Make new file entry
+	DataType    string    `json:"type"`
+	Destination uint32    `json:"destination"`
+	Timestamp   time.Time `json:"timestamp"`
+	Path        string    `json:"path"`
+	Save        bool      `json:"save"`
 
-	// Write message to message file
-
-	// Encode file to a new file
-
-	// Run send remaining on entry
-
-}
-
-/*
-type videoRequest struct {
-	path string
-	dest uint32
-}
-
-func (r videoRequest) processRequest(d *Distributor) {
-	// Make new file entry
-
-	// Run send remaining on entry
-
-}
-*/
-
-type Distributor struct {
-	requests  chan<- request
-	timeouts  chan<- int // send filenumber to check
-	active    []file     // Active entries
-	messageID <-chan uint32
+	Encoded bool
 }
 
 type file struct {
-	fileType int
-	data     []byte
-	bitmap   []bool     // contains acknowledged bitmap
-	timer    time.Timer // Timer contains the resend timeout
+	meta    meta
+	timeout time.Time
 }
 
-// RegisterMessage signals a desire to send a given message. It will return with
-// the file ID for the new message so we can keep track of it later.
-func (d *Distributor) RegisterMessage(dest uint32, message []byte) uint32 {
-	id := <-d.messageID
-	d.requests <- messageRequest{
-		data:   message,
-		dest:   dest,
-		fileID: id,
+type Distributor struct {
+	storePath string
+	outPath   string
+	metaPath  string
+	requests  chan<- meta
+	timeouts  chan<- uint32    // send filenumber to check
+	files     map[uint32]*file // A map from file entries to metadata
+	messageID <-chan uint32
+}
+
+// Register signals a desire to send a piece of data. It will return with the
+// file ID for the new file so we can keep track of it later. This function
+// should not return until the request is in a state that we can recover from in
+// the event of a system failure. In other words, once this function returns,
+// this request should be able to be forgotten by the caller.
+func (d *Distributor) Register(r RegistrationRequest) (id uint32, err error) {
+	// In order to satisfy the condition that after running this function, a
+	// power failure should not cause us to fail at transmitting the data.
+
+	// First build meta
+	id = <-d.messageID
+
+	// If request is JSON save the json and then treat this request as a regular
+	// file.
+	if r.JSON != nil {
+		r.Path = path.Join(d.storePath, util.Utoa(id))
+		r.Save = false
+		// save the JSON to the store directory and update the path
+		var b []byte
+		b, err = json.Marshal(r.JSON)
+		if err != nil {
+			return
+		}
+		err = ioutil.WriteFile(r.Path, b, 0660)
+		if err != nil {
+			return
+		}
 	}
-	return id
+
+	if len(r.Path) == 0 {
+		err = fmt.Errorf("no data included in registration request")
+		return
+	}
+
+	// Encode the file, since the ID should be unique we are safe to edit these
+	// files from go routines.
+	reqOutPath := path.Join(d.outPath, util.Utoa(id))
+	FileToWire(r.Path, reqOutPath)
+	var fi os.FileInfo
+	fi, err = os.Stat(reqOutPath)
+	if err != nil {
+		return
+	}
+	encodedSize := fi.Size()
+
+	// Make new metadata entry
+	m := meta{
+		ID:   id,
+		Size: uint32(encodedSize),
+
+		DataType:    r.DataType,
+		Destination: r.Destination,
+		Timestamp:   r.Timestamp,
+		Path:        r.Path,
+		Save:        r.Save,
+	}
+
+	// Write metadata to file
+	reqMetaPath := path.Join(d.metaPath, util.Utoa(id))
+	mfile, err := os.Create(reqMetaPath)
+	menc := gob.NewEncoder(mfile)
+	menc.Encode(m)
+
+	d.requests <- m
+	return
 }
 
-// RegisterVideo signals a desire to send the video given by the path. It is
-// assumed that the videos name will be a unix timestamp as has already been
-// done in the SlugCam system.
-// TODO deletion
-func (d *Distributor) RegisterVideo(dest uint32, path string) {
-
+// loadMeta is used to bring a new piece of metadata into the system. The
+// register function is goroutine safe and accessing the files is ok there,
+// however writing to the distributors file record is not. This function just
+// adds the metadata and triggers a resend of the file.
+func (d *Distributor) loadMetadata(m meta) {
+	_, ok := d.files[m.ID]
+	if ok {
+		// Metadata already loaded
+		return
+	}
+	d.files[m.ID] = &file{
+		meta:    m,
+		timeout: time.Now(),
+	}
+	d.timeouts <- m.ID
 }
 
-func sendRemaining() {
+func (d *Distributor) sendRemaining(id uint32) {
+	f := d.files[id]
 	// make packet, send it off
 
 	// set timeout
+	// TODO is this right?
+	f.timeout = time.Now().Add(ACK_TIMEOUT)
+	time.AfterFunc(ACK_TIMEOUT, func() {
+		d.timeouts <- id
+	})
+
 }
 
-func (d *Distributor) timeoutCheck(fileID int) {
+func (d *Distributor) checkTimeout(id uint32) {
 	// send remaining
 
 }
@@ -116,36 +187,60 @@ func (d *Distributor) receiveACK(ack ACK) {
 	// if not reset timout timer
 }
 
-func Distribute(pathPrefix string, incomingACKs <-chan ACK) *Distributor {
-	d := new(Distributor)
+func Distribute(pathPrefix string, incomingACKs <-chan ACK) (d *Distributor, err error) {
+	d = new(Distributor)
 
-	requests := make(chan request, REQUEST_BUFFER_SIZE)
+	requests := make(chan meta, REQUEST_BUFFER_SIZE)
+	timeouts := make(chan uint32, TIMEOUT_BUFFER_SIZE)
+
 	d.requests = requests
-
-	timeouts := make(chan int, TIMEOUT_BUFFER_SIZE)
 	d.timeouts = timeouts
-	// load entries from storage
+	d.files = make(map[uint32]*file)
 
-	d.messageID = util.RunCounterUint32(path.Join(pathPrefix, MESSAGE_COUNTER_PATH))
+	d.metaPath = path.Join(pathPrefix, META_PATH)
+	d.outPath = path.Join(pathPrefix, OUT_PATH)
+	d.storePath = path.Join(pathPrefix, STORE_PATH)
 
+	counterPath := path.Join(pathPrefix, COUNTER_PATH)
+
+	// Make the directories (this will build the path dependency for counterPath
+	// as well since it just needs the path prefix, which is recursively made
+	// here)
+	err = os.MkdirAll(d.metaPath, 0755)
+	if err != nil {
+		return
+	}
+	err = os.MkdirAll(d.outPath, 0755)
+	if err != nil {
+		return
+	}
+	err = os.MkdirAll(d.storePath, 0755)
+	if err != nil {
+		return
+	}
+
+	// Start the counter
+	d.messageID = util.RunCounterUint32(counterPath)
+
+	// Main loop
 	go func() {
 		for {
 			select {
 			case rr := <-requests:
 				// Registration requests
-				rr.processRequest(d)
+				d.loadMetadata(rr)
 
 			case ack := <-incomingACKs:
 				// Acknowledgement received
 				d.receiveACK(ack)
 
 			case fileID := <-timeouts:
-				d.timeoutCheck(fileID)
+				d.checkTimeout(fileID)
 				// Timeout checks
 			}
 
 		}
 
 	}()
-	return d
+	return
 }
