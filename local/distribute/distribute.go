@@ -64,8 +64,6 @@ type meta struct {
 	Timestamp   time.Time `json:"timestamp"`
 	Path        string    `json:"path"`
 	Save        bool      `json:"save"`
-
-	Encoded bool
 }
 
 type file struct {
