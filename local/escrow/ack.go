@@ -17,5 +17,5 @@ func sendAck(ack ACK, dest uint32, r pipeline.Router) {
 		Type:         header.DataHeader_ACK.Enum(),
 		Destinations: []uint32{dest},
 	}
-	r.OriginateDSR(dest, dh, []byte{})
+	r.OriginateDSR(dest, uint32(0), dh, []byte{})
 }

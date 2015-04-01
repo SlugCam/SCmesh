@@ -58,6 +58,6 @@ func ping(r pipeline.Router, pingOptions json.RawMessage, style int) {
 	if style == PING_FLOOD {
 		r.OriginateFlooding(po.TTL, dh, d)
 	} else if style == PING_DSR {
-		r.OriginateDSR(po.Destination, dh, d)
+		r.OriginateDSR(po.Destination, uint32(0), dh, d)
 	}
 }

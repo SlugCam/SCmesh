@@ -6,15 +6,20 @@ package escrow
 // TODO prioritize resends for messages?
 
 import (
+	"bufio"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"time"
 
+	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/util"
+	"github.com/golang/protobuf/proto"
 )
 
 // These path constants will be relative to the prefix provided to the
@@ -28,6 +33,7 @@ const (
 )
 
 const (
+	MAX_PAYLOAD_SIZE    = 512
 	REQUEST_BUFFER_SIZE = 100
 	TIMEOUT_BUFFER_SIZE = 10
 )
@@ -75,6 +81,7 @@ type Distributor struct {
 	timeouts  chan<- uint32    // send filenumber to check
 	files     map[uint32]*file // A map from file entries to metadata
 	messageID <-chan uint32
+	router    pipeline.Router
 }
 
 // Register signals a desire to send a piece of data. It will return with the
@@ -161,33 +168,130 @@ func (d *Distributor) loadMetadata(m meta) {
 	d.timeouts <- m.ID
 }
 
+// TODO should error check come after processing
+// TODO Check for errors
+// Returns whether eof was encountered and an error if there is one. Note that
+// in go n is initialized to 0, eof to false, and err to nil.
+func scanNull(r *bufio.Reader) (n int, eof bool, err error) {
+	var c byte
+	for {
+		c, err = r.ReadByte()
+		n++
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				eof = true
+				return
+			}
+			return
+		}
+		if c != byte(0) {
+			err = r.UnreadByte()
+			n--
+			return
+		}
+	}
+}
+
+func scanBytes(r *bufio.Reader) (data []byte, n int, eof bool, err error) {
+	var c byte
+	for {
+		c, err = r.ReadByte()
+		n++
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				eof = true
+				return
+			}
+			return
+		}
+		if c == byte(0) {
+			err = r.UnreadByte()
+			n--
+			return
+		}
+		data = append(data, c)
+		if n >= MAX_PAYLOAD_SIZE {
+			return
+		}
+	}
+}
+
+// TODO better error checking
 func (d *Distributor) sendRemaining(id uint32) {
 	f := d.files[id]
+
+	// TODO check if we are complete here, not at ACK
 	// make packet, send it off
 
+	dh := header.DataHeader{
+		FileId:       proto.Uint32(id),
+		Destinations: []uint32{f.meta.Destination},
+		Type:         header.DataHeader_MESSAGE.Enum(),
+		// TODO timestamp, type ->string, size
+	}
+	offset := 0
+	dataFile, _ := os.Open(f.meta.Path)
+	// TODO check err
+	r := bufio.NewReader(dataFile)
+	first := true
+	for {
+		n, eof, err := scanNull(r)
+		if err != nil || eof {
+			break
+		}
+		offset += n
+		if first {
+			first = false
+			if uint32(n) == f.meta.Size {
+				break
+				// TODO file is done according to us
+			}
+		}
+		b, n, eof, err := scanBytes(r)
+
+		d.router.OriginateDSR(f.meta.Destination, uint32(offset), dh, b)
+		if err != nil || eof {
+			break
+		}
+		offset += n
+	}
+
 	// set timeout
-	// TODO is this right?
-	f.timeout = time.Now().Add(ACK_TIMEOUT)
-	time.AfterFunc(ACK_TIMEOUT, func() {
+	f.timeout = time.Now().Add(FIRST_TIMEOUT)
+	time.AfterFunc(FIRST_TIMEOUT, func() {
 		d.timeouts <- id
 	})
 
 }
 
 func (d *Distributor) checkTimeout(id uint32) {
-	// send remaining
-
+	f, ok := d.files[id]
+	if !ok || time.Now().Before(f.timeout) {
+		return
+	}
+	d.sendRemaining(id)
 }
 
 func (d *Distributor) receiveACK(ack ACK) {
+	// If ACK denotates completed data delete the entry
+
 	// update bitmap
 
 	// check if fully acknowledged
 
-	// if not reset timout timer
+	// if not reset timeout timer
+
+	/* set timeout
+	f.timeout = time.Now().Add(ACK_TIMEOUT)
+	time.AfterFunc(ACK_TIMEOUT, func() {
+		d.timeouts <- id
+	})
+	*/
 }
 
-func Distribute(pathPrefix string, incomingACKs <-chan ACK) (d *Distributor, err error) {
+func Distribute(pathPrefix string, router pipeline.Router, incomingACKs <-chan ACK) (d *Distributor, err error) {
 	d = new(Distributor)
 
 	requests := make(chan meta, REQUEST_BUFFER_SIZE)

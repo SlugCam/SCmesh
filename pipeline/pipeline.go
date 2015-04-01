@@ -12,7 +12,7 @@ const BUFFER_SIZE = 1000
 
 type Router interface {
 	LocalID() uint32
-	OriginateDSR(dest uint32, dataHeader header.DataHeader, data []byte)
+	OriginateDSR(dest, offset uint32, dataHeader header.DataHeader, data []byte)
 	OriginateFlooding(TTL int, dataHeader header.DataHeader, data []byte)
 }
 
