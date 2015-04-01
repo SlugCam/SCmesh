@@ -1,4 +1,4 @@
-package local
+package escrow
 
 import (
 	"encoding/json"
@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SlugCam/SCmesh/local/distribute"
 	"github.com/SlugCam/SCmesh/packet/header"
 )
 
@@ -40,15 +39,15 @@ func TestEscrow(t *testing.T) {
 
 	r := NewMockRouter(0)
 
-	acks := make(chan distribute.ACK)
+	acks := make(chan ACK)
 
-	d, err := distribute.Distribute(dir, r, acks)
+	d, err := Distribute(dir, r, acks)
 	if err != nil {
 		t.Fatal("Error in Distribute:", err)
 	}
 
 	message := json.RawMessage(`{"test":45}`)
-	_, err = d.Register(distribute.RegistrationRequest{
+	_, err = d.Register(RegistrationRequest{
 		DataType:    "message",
 		Destination: uint32(0),
 		Timestamp:   time.Now(),

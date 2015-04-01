@@ -1,10 +1,14 @@
-package distribute
+package escrow
 
 import (
 	"encoding/ascii85"
 	"io"
 	"os"
 )
+
+func FileFromWire(inPath string, outPath string) {
+
+}
 
 func FileToWire(inPath string, outPath string) error {
 	in, err := os.Open(inPath)

@@ -1,4 +1,4 @@
-package distribute
+package escrow
 
 // Fix when IDs are rolled over, create will fail and drop data
 
@@ -20,16 +20,6 @@ import (
 	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/util"
 	"github.com/golang/protobuf/proto"
-)
-
-// These path constants will be relative to the prefix provided to the
-// distribute function.
-const (
-	//PATH_PREFIX          = "/var/SlugCam/SCmesh"
-	COUNTER_PATH = "count"
-	STORE_PATH   = "store"
-	OUT_PATH     = "out"
-	META_PATH    = "meta"
 )
 
 const (
@@ -66,7 +56,7 @@ type meta struct {
 	Save        bool      `json:"save"`
 }
 
-type file struct {
+type incomingFile struct {
 	meta    meta
 	timeout time.Time
 }
@@ -76,8 +66,8 @@ type Distributor struct {
 	outPath   string
 	metaPath  string
 	requests  chan<- meta
-	timeouts  chan<- uint32    // send filenumber to check
-	files     map[uint32]*file // A map from file entries to metadata
+	timeouts  chan<- uint32            // send filenumber to check
+	files     map[uint32]*incomingFile // A map from file entries to metadata
 	messageID <-chan uint32
 	router    pipeline.Router
 }
@@ -159,7 +149,7 @@ func (d *Distributor) loadMetadata(m meta) {
 		// Metadata already loaded
 		return
 	}
-	d.files[m.ID] = &file{
+	d.files[m.ID] = &incomingFile{
 		meta:    m,
 		timeout: time.Now(),
 	}
@@ -297,15 +287,15 @@ func Distribute(pathPrefix string, router pipeline.Router, incomingACKs <-chan A
 
 	d.requests = requests
 	d.timeouts = timeouts
-	d.files = make(map[uint32]*file)
+	d.files = make(map[uint32]*incomingFile)
 
-	d.metaPath = path.Join(pathPrefix, META_PATH)
-	d.outPath = path.Join(pathPrefix, OUT_PATH)
-	d.storePath = path.Join(pathPrefix, STORE_PATH)
+	d.metaPath = path.Join(pathPrefix, DIST_META_PATH)
+	d.outPath = path.Join(pathPrefix, DIST_OUT_PATH)
+	d.storePath = path.Join(pathPrefix, DIST_STORE_PATH)
 
 	d.router = router
 
-	counterPath := path.Join(pathPrefix, COUNTER_PATH)
+	counterPath := path.Join(pathPrefix, DIST_COUNTER_PATH)
 
 	// Make the directories (this will build the path dependency for counterPath
 	// as well since it just needs the path prefix, which is recursively made

@@ -1,4 +1,4 @@
-package collect
+package escrow
 
 import (
 	"os"
@@ -7,14 +7,6 @@ import (
 
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/pipeline"
-)
-
-// These path constants will be relative to the prefix provided to the
-// collect function.
-const (
-	STORE_PATH = "c.in"
-	OUT_PATH   = "c.out"
-	META_PATH  = "c.meta"
 )
 
 type CollectedData struct {
@@ -40,9 +32,9 @@ type Collector struct {
 func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<- CollectedData, router pipeline.Router) (d *Collector, err error) {
 	d = new(Collector)
 
-	d.metaPath = path.Join(pathPrefix, META_PATH)
-	d.outPath = path.Join(pathPrefix, OUT_PATH)
-	d.storePath = path.Join(pathPrefix, STORE_PATH)
+	d.metaPath = path.Join(pathPrefix, COL_META_PATH)
+	d.outPath = path.Join(pathPrefix, COL_OUT_PATH)
+	d.storePath = path.Join(pathPrefix, COL_STORE_PATH)
 
 	d.router = router
 
