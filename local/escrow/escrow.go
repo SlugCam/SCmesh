@@ -20,3 +20,6 @@ const (
 	DIST_OUT_PATH     = "out"
 	DIST_META_PATH    = "meta"
 )
+
+const (
+	COL_FILE_SCAN_TIMEOUT = 5 * time.Second

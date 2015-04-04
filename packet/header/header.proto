@@ -18,15 +18,21 @@ message FloodingHeader {
     required uint32 packet_id = 2;
 }
 
+message FileHeader {
+    required uint64 file_id = 1;
+    required uint32 file_size = 2;
+    required string type = 3;
+    required uint64 timestamp = 4;
+}
 message DataHeader {
-    optional uint32 file_id = 1;
     repeated uint32 destinations = 2 [packed=true];
     enum Type {
         MESSAGE = 0;
-        VIDEO = 1;
+        FILE = 1;
         ACK = 2;
     }
     required Type type = 3;
+    optional FileHeader file_header = 4;
 }
 
 message DSRHeader {

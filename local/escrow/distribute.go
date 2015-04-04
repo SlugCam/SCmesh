@@ -56,7 +56,7 @@ type meta struct {
 	Save        bool      `json:"save"`
 }
 
-type incomingFile struct {
+type outgoingFile struct {
 	meta    meta
 	timeout time.Time
 }
@@ -67,7 +67,7 @@ type Distributor struct {
 	metaPath  string
 	requests  chan<- meta
 	timeouts  chan<- uint32            // send filenumber to check
-	files     map[uint32]*incomingFile // A map from file entries to metadata
+	files     map[uint32]*outgoingFile // A map from file entries to metadata
 	messageID <-chan uint32
 	router    pipeline.Router
 }
@@ -149,7 +149,7 @@ func (d *Distributor) loadMetadata(m meta) {
 		// Metadata already loaded
 		return
 	}
-	d.files[m.ID] = &incomingFile{
+	d.files[m.ID] = &outgoingFile{
 		meta:    m,
 		timeout: time.Now(),
 	}
@@ -287,7 +287,7 @@ func Distribute(pathPrefix string, router pipeline.Router, incomingACKs <-chan A
 
 	d.requests = requests
 	d.timeouts = timeouts
-	d.files = make(map[uint32]*incomingFile)
+	d.files = make(map[uint32]*outgoingFile)
 
 	d.metaPath = path.Join(pathPrefix, DIST_META_PATH)
 	d.outPath = path.Join(pathPrefix, DIST_OUT_PATH)
