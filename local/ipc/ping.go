@@ -10,7 +10,6 @@ import (
 	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/routing"
-	"github.com/golang/protobuf/proto"
 )
 
 type PingOptions struct {
@@ -26,7 +25,6 @@ const (
 func makePingPacket(localID uint32) (dh header.DataHeader, b []byte, err error) {
 
 	dh = header.DataHeader{
-		FileId:       proto.Uint32(0),
 		Destinations: []uint32{routing.BroadcastID},
 		Type:         header.DataHeader_MESSAGE.Enum(),
 	}

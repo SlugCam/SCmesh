@@ -6,9 +6,9 @@ import (
 )
 
 type ACK struct {
-	FileID uint64
-	Offset uint64
-	Size   uint64
+	FileID int64
+	Offset int64
+	Size   int
 }
 
 func (ack ACK) send(dest uint32, r pipeline.Router) {

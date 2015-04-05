@@ -12,11 +12,11 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-const BROADCAST_ID = uint32(0xFFFF)
+const BROADCAST_ID = uint32(0xFFFFFFFF)
 
 type OriginationRequest struct {
 	TTL           int
-	PayloadOffset uint32
+	PayloadOffset int64
 	DataHeader    header.DataHeader
 	Data          []byte
 }
@@ -50,7 +50,7 @@ func processTTL(p *packet.Packet) bool {
 type cacheEntry struct {
 	node   uint32 // originating node
 	id     uint32 // flooding id
-	offset uint32 // payload offset
+	offset int64  // payload offset
 }
 
 // RoutePackets starts a goroutine that performs flooding routing functions.

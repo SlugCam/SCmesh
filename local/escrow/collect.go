@@ -4,6 +4,9 @@
 package escrow
 
 import (
+	"encoding/gob"
+	"fmt"
+	"io"
 	"os"
 	"path"
 	"time"
@@ -21,7 +24,7 @@ type CollectedData struct {
 }
 type CollectedMeta struct {
 	DataType  string
-	Size      uint64
+	Size      int64
 	Timestamp time.Time
 }
 
@@ -53,7 +56,7 @@ func (c *Collector) mkdirs() error {
 	if err != nil {
 		return err
 	}
-
+	return nil
 }
 
 func (c *Collector) processPacket(p packet.Packet) error {
@@ -66,11 +69,11 @@ func (c *Collector) processPacket(p packet.Packet) error {
 
 	dh := p.Header.DataHeader.FileHeader
 
-	source := util.Uint32toa(*p.Header.Source)
-	fileID := util.Uint32toa(*dh.FileId)
+	//source := util.Utoa(*p.Header.Source)
+	//fileID := util.Utoa(*dh.FileId)
 	// TODO Sprintf?
-	filePath := strings.Join([]string{source, ".", fileID}, "")
-
+	//filePath := strings.Join([]string{source, ".", fileID}, "")
+	filePath := fmt.Sprintf("%d.%d", *p.Header.Source, *dh.FileId)
 	// save metadata to file
 	metaFilePath := path.Join(c.metaPath, filePath)
 	outFilePath := path.Join(c.storePath, filePath)
@@ -84,6 +87,9 @@ func (c *Collector) processPacket(p packet.Packet) error {
 			Timestamp: time.Unix(*dh.Timestamp, 0),
 		}
 		mfile, err := os.Create(metaFilePath)
+		if err != nil {
+			return err
+		}
 		menc := gob.NewEncoder(mfile)
 		menc.Encode(meta)
 	}
@@ -93,7 +99,7 @@ func (c *Collector) processPacket(p packet.Packet) error {
 		return err
 	}
 	// copy data to file
-	_, err = f.WriteAt(p.Payload, p.Preheader.Offset)
+	_, err = f.WriteAt(p.Payload, p.Preheader.PayloadOffset)
 	if err != nil {
 		return err
 	}
@@ -103,32 +109,58 @@ func (c *Collector) processPacket(p packet.Packet) error {
 	}
 	// send ACK
 	ack := ACK{
-		FileID: *dh.FileID,
-		Offset: uint64(p.Preheader.Offset),
+		FileID: *dh.FileId,
+		Offset: p.Preheader.PayloadOffset,
 		Size:   len(p.Payload),
 	}
 	ack.send(*p.Header.Source, c.router)
 
 	// check if file is correct length, if so set timeout to scan file
-	fi, err = f.Stat()
+	fi, err := f.Stat()
 	if err != nil {
 		return err
 	}
 	if fi.Size() == *dh.FileSize {
 		// set or reset timeout
-		timer, ok := c.timers[fileID]
+		timer, ok := c.timers[filePath]
 		if ok {
 			timer.Reset(COL_FILE_SCAN_TIMEOUT)
 		} else {
-			c.timers[fileID] = time.AfterFunc(COL_FILE_SCAN_TIMEOUT, func() {
-				c.scanRequest <- fileID
+			c.timers[filePath] = time.AfterFunc(COL_FILE_SCAN_TIMEOUT, func() {
+				c.scanRequest <- filePath
 			})
 
 		}
 	}
+	return nil
 }
 
-func (c *Collector) scanFile(fileID string) {
+// TODO check file length
+func (c *Collector) scanFile(fileID string) (bool, error) {
+	allNull := true
+	file, err := os.Open(fileID)
+	if err != nil {
+		return allNull, err
+	}
+	b := make([]byte, 4096) // TODO magic number
+	for {
+		n, err := file.Read(b)
+		for i := 0; i < n; i++ {
+			if b[i] != '\x00' {
+				allNull = false
+				break
+			}
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return allNull, err
+			}
+		}
+
+	}
+	return allNull, nil
 }
 
 func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<- CollectedData, router pipeline.Router) (c *Collector, err error) {
@@ -140,11 +172,12 @@ func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<-
 	c.router = router
 	c.out = out
 	// TODO magic number
-	c.scanRequest = make(chan string, 1000)
+	scanRequest := make(chan string, 1000)
+	c.scanRequest = scanRequest
 
-	err := c.mkdirs()
+	err = c.mkdirs()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Main loop
@@ -153,7 +186,7 @@ func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<-
 			select {
 			case p := <-incomingPackets:
 				c.processPacket(p)
-			case r := <-c.scanRequest:
+			case r := <-scanRequest:
 				c.scanFile(r)
 			}
 		}

@@ -19,7 +19,6 @@ import (
 	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/util"
-	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -214,7 +213,6 @@ func (d *Distributor) sendRemaining(id uint32) {
 	// make packet, send it off
 
 	dh := header.DataHeader{
-		FileId:       proto.Uint32(id),
 		Destinations: []uint32{f.meta.Destination},
 		Type:         header.DataHeader_MESSAGE.Enum(),
 		// TODO timestamp, type ->string, size

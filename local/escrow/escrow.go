@@ -3,6 +3,8 @@ The package escrow includes the reliability layer for the SCmesh system.
 */
 package escrow
 
+import "time"
+
 // These path constants will be relative to the prefix provided to the
 // collect function.
 const (
@@ -14,7 +16,7 @@ const (
 // These path constants will be relative to the prefix provided to the
 // distribute function.
 const (
-	//PATH_PREFIX          = "/var/SlugCam/SCmesh"
+	//PATH_PREFIX     = "/var/SlugCam/SCmesh"
 	DIST_COUNTER_PATH = "count"
 	DIST_STORE_PATH   = "store"
 	DIST_OUT_PATH     = "out"
@@ -23,3 +25,4 @@ const (
 
 const (
 	COL_FILE_SCAN_TIMEOUT = 5 * time.Second
+)

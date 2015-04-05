@@ -6,17 +6,15 @@ import (
 
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
-	"github.com/golang/protobuf/proto"
 )
 
 // This is the node ID used to mean all nodes.
-const BroadcastID = uint32(0xFFFF)
+const BroadcastID = uint32(0xFFFFFFFF)
 
 func TestPacketCreation(t *testing.T) {
 	localID := uint32(23)
-	offset := uint32(8907)
+	offset := int64(8907)
 	dh := header.DataHeader{
-		FileId:       proto.Uint32(1),
 		Destinations: []uint32{BroadcastID},
 	}
 	data := []byte("TestPacketCreation Payload")

@@ -142,11 +142,11 @@ func (raw *RawPacket) Parse() (pack Packet, err error) {
 		return
 	}
 	preheaderBuf := bytes.NewBuffer(decodedPreheader)
-	err = binary.Read(preheaderBuf, binary.LittleEndian, pack.Preheader.Receiver)
+	err = binary.Read(preheaderBuf, binary.LittleEndian, &pack.Preheader.Receiver)
 	if err != nil {
 		return
 	}
-	err = binary.Read(preheaderBuf, binary.LittleEndian, pack.Preheader.PayloadOffset)
+	err = binary.Read(preheaderBuf, binary.LittleEndian, &pack.Preheader.PayloadOffset)
 	if err != nil {
 		return
 	}

@@ -39,7 +39,6 @@ func TestDSROrigination(t *testing.T) {
 
 	// Send packet 1 from node 1
 	dh := header.DataHeader{
-		FileId:       proto.Uint32(1),
 		Destinations: []uint32{routing.BroadcastID},
 		Type:         header.DataHeader_MESSAGE.Enum(),
 	}
@@ -125,7 +124,6 @@ func TestFloodingTTL(t *testing.T) {
 
 	// Send packet 1 from node 1
 	dh := header.DataHeader{
-		FileId:       proto.Uint32(1),
 		Destinations: []uint32{routing.BroadcastID},
 		Type:         header.DataHeader_MESSAGE.Enum(),
 	}
