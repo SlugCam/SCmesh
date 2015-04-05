@@ -19,10 +19,10 @@ message FloodingHeader {
 }
 
 message FileHeader {
-    required uint64 file_id = 1;
-    required uint32 file_size = 2;
+    required int64 file_id = 1;
+    required int64 file_size = 2;
     required string type = 3;
-    required uint64 timestamp = 4;
+    required int64 timestamp = 4;
 }
 message DataHeader {
     repeated uint32 destinations = 2 [packed=true];

@@ -11,6 +11,7 @@ It is generated from these files:
 It has these top-level messages:
 	Header
 	FloodingHeader
+	FileHeader
 	DataHeader
 	DSRHeader
 */
@@ -27,18 +28,18 @@ type DataHeader_Type int32
 
 const (
 	DataHeader_MESSAGE DataHeader_Type = 0
-	DataHeader_VIDEO   DataHeader_Type = 1
+	DataHeader_FILE    DataHeader_Type = 1
 	DataHeader_ACK     DataHeader_Type = 2
 )
 
 var DataHeader_Type_name = map[int32]string{
 	0: "MESSAGE",
-	1: "VIDEO",
+	1: "FILE",
 	2: "ACK",
 }
 var DataHeader_Type_value = map[string]int32{
 	"MESSAGE": 0,
-	"VIDEO":   1,
+	"FILE":    1,
 	"ACK":     2,
 }
 
@@ -139,23 +140,56 @@ func (m *FloodingHeader) GetPacketId() uint32 {
 	return 0
 }
 
+type FileHeader struct {
+	FileId           *int64  `protobuf:"varint,1,req,name=file_id" json:"file_id,omitempty"`
+	FileSize         *int64  `protobuf:"varint,2,req,name=file_size" json:"file_size,omitempty"`
+	Type             *string `protobuf:"bytes,3,req,name=type" json:"type,omitempty"`
+	Timestamp        *int64  `protobuf:"varint,4,req,name=timestamp" json:"timestamp,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *FileHeader) Reset()         { *m = FileHeader{} }
+func (m *FileHeader) String() string { return proto.CompactTextString(m) }
+func (*FileHeader) ProtoMessage()    {}
+
+func (m *FileHeader) GetFileId() int64 {
+	if m != nil && m.FileId != nil {
+		return *m.FileId
+	}
+	return 0
+}
+
+func (m *FileHeader) GetFileSize() int64 {
+	if m != nil && m.FileSize != nil {
+		return *m.FileSize
+	}
+	return 0
+}
+
+func (m *FileHeader) GetType() string {
+	if m != nil && m.Type != nil {
+		return *m.Type
+	}
+	return ""
+}
+
+func (m *FileHeader) GetTimestamp() int64 {
+	if m != nil && m.Timestamp != nil {
+		return *m.Timestamp
+	}
+	return 0
+}
+
 type DataHeader struct {
-	FileId           *uint32          `protobuf:"varint,1,opt,name=file_id" json:"file_id,omitempty"`
 	Destinations     []uint32         `protobuf:"varint,2,rep,packed,name=destinations" json:"destinations,omitempty"`
 	Type             *DataHeader_Type `protobuf:"varint,3,req,name=type,enum=header.DataHeader_Type" json:"type,omitempty"`
+	FileHeader       *FileHeader      `protobuf:"bytes,4,opt,name=file_header" json:"file_header,omitempty"`
 	XXX_unrecognized []byte           `json:"-"`
 }
 
 func (m *DataHeader) Reset()         { *m = DataHeader{} }
 func (m *DataHeader) String() string { return proto.CompactTextString(m) }
 func (*DataHeader) ProtoMessage()    {}
-
-func (m *DataHeader) GetFileId() uint32 {
-	if m != nil && m.FileId != nil {
-		return *m.FileId
-	}
-	return 0
-}
 
 func (m *DataHeader) GetDestinations() []uint32 {
 	if m != nil {
@@ -169,6 +203,13 @@ func (m *DataHeader) GetType() DataHeader_Type {
 		return *m.Type
 	}
 	return DataHeader_MESSAGE
+}
+
+func (m *DataHeader) GetFileHeader() *FileHeader {
+	if m != nil {
+		return m.FileHeader
+	}
+	return nil
 }
 
 type DSRHeader struct {
