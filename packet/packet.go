@@ -1,9 +1,11 @@
 // The packet package provides data structures and routines for the handling of
 // packet objects. Along with the data structure of packets it also defines two
 // pipeline functions for handling them: ParsePackets and PackPackets.
+// TODO offset could be varint.
 package packet
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 
@@ -14,8 +16,7 @@ import (
 )
 
 const (
-	MAX_PACKET_LEN            = 1460
-	SERIALIZED_PREHEADER_SIZE = 8
+	MAX_PACKET_LEN = 1460
 )
 
 type RawPacket struct {
@@ -26,7 +27,7 @@ type RawPacket struct {
 
 type Preheader struct {
 	Receiver      uint32
-	PayloadOffset uint32
+	PayloadOffset int64
 }
 
 type Packet struct {
@@ -41,16 +42,23 @@ func NewPacket() *Packet {
 	return p
 }
 
+const SERIALIZED_PREHEADER_SIZE = 12
+
 // serializePreheader provides serialization of the packet preheader.
 func (p *Preheader) Serialize() []byte {
-	out := make([]byte, 0, 8)
-	receiver := make([]byte, 4)
-	offset := make([]byte, 4)
-	binary.LittleEndian.PutUint32(receiver, p.Receiver)
-	binary.LittleEndian.PutUint32(offset, p.PayloadOffset)
-	out = append(out, receiver...)
-	out = append(out, offset...)
-	return out
+	out := new(bytes.Buffer)
+
+	err := binary.Write(out, binary.LittleEndian, p.Receiver)
+	if err != nil {
+		log.Error("Problem with preheader serialization.")
+	}
+
+	err = binary.Write(out, binary.LittleEndian, p.PayloadOffset)
+	if err != nil {
+		log.Error("Problem with preheader serialization.")
+	}
+
+	return out.Bytes()
 }
 
 // Pack takes a single packet and encodes it to the wire format. It will
@@ -78,7 +86,7 @@ func (p *Packet) Pack(out chan<- []byte) {
 
 		// Preheader
 		newPreheader := p.Preheader // Will make a copy of the preheader
-		newPreheader.PayloadOffset = uint32(originalOffset + relativeOffset)
+		newPreheader.PayloadOffset = int64(originalOffset + relativeOffset)
 		serializedPreheader := newPreheader.Serialize()
 		encodedPreheader := encode(serializedPreheader)
 
@@ -133,8 +141,15 @@ func (raw *RawPacket) Parse() (pack Packet, err error) {
 		err = errors.New("incorrect preheader length")
 		return
 	}
-	pack.Preheader.Receiver = binary.LittleEndian.Uint32(decodedPreheader[0:4])
-	pack.Preheader.PayloadOffset = binary.LittleEndian.Uint32(decodedPreheader[4:8])
+	preheaderBuf := bytes.NewBuffer(decodedPreheader)
+	err = binary.Read(preheaderBuf, binary.LittleEndian, pack.Preheader.Receiver)
+	if err != nil {
+		return
+	}
+	err = binary.Read(preheaderBuf, binary.LittleEndian, pack.Preheader.PayloadOffset)
+	if err != nil {
+		return
+	}
 
 	// TODO If receiver is incorrect we can drop (or continue if peeking is desired)
 
