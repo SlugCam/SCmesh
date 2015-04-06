@@ -11,6 +11,7 @@ import (
 	"path"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/pipeline"
 )
@@ -71,7 +72,7 @@ func (c *Collector) processPacket(p packet.Packet) error {
 
 	//source := util.Utoa(*p.Header.Source)
 	//fileID := util.Utoa(*dh.FileId)
-	// TODO Sprintf?
+	// TODO Sprintf? Close files
 	//filePath := strings.Join([]string{source, ".", fileID}, "")
 	filePath := fmt.Sprintf("%d.%d", *p.Header.Source, *dh.FileId)
 	// save metadata to file
@@ -99,6 +100,7 @@ func (c *Collector) processPacket(p packet.Packet) error {
 		return err
 	}
 	// copy data to file
+	log.Info("PAYLOAD:", p.Payload)
 	_, err = f.WriteAt(p.Payload, p.Preheader.PayloadOffset)
 	if err != nil {
 		return err
@@ -137,17 +139,17 @@ func (c *Collector) processPacket(p packet.Packet) error {
 
 // TODO check file length
 func (c *Collector) scanFile(fileID string) (bool, error) {
-	allNull := true
-	file, err := os.Open(fileID)
+	noNull := true
+	file, err := os.Open(path.Join(c.storePath, fileID))
 	if err != nil {
-		return allNull, err
+		return noNull, err
 	}
 	b := make([]byte, 4096) // TODO magic number
 	for {
 		n, err := file.Read(b)
 		for i := 0; i < n; i++ {
-			if b[i] != '\x00' {
-				allNull = false
+			if b[i] == '\x00' {
+				noNull = false
 				break
 			}
 		}
@@ -155,12 +157,12 @@ func (c *Collector) scanFile(fileID string) (bool, error) {
 			if err == io.EOF {
 				break
 			} else {
-				return allNull, err
+				return noNull, err
 			}
 		}
 
 	}
-	return allNull, nil
+	return noNull, nil
 }
 
 func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<- CollectedData, router pipeline.Router) (c *Collector, err error) {
@@ -172,6 +174,7 @@ func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<-
 	c.router = router
 	c.out = out
 	// TODO magic number
+	c.timers = make(map[string]*time.Timer)
 	scanRequest := make(chan string, 1000)
 	c.scanRequest = scanRequest
 
@@ -185,9 +188,24 @@ func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<-
 		for {
 			select {
 			case p := <-incomingPackets:
-				c.processPacket(p)
+				log.WithFields(log.Fields{
+					"packet": p,
+				}).Info("Packet read by collector")
+				err := c.processPacket(p)
+				if err != nil {
+					log.Error("Error processing packet: ", err)
+				}
 			case r := <-scanRequest:
-				c.scanFile(r)
+				log.Infof("checking for completion of %d", r)
+				finished, err := c.scanFile(r)
+				log.Infof("log.Infof = ", finished, ", ", err)
+				if err != nil {
+					log.Error("Error scanning collected file. ", err)
+				} else if finished {
+					// TODO, check if file exists
+					FileFromWire(path.Join(c.storePath, r), path.Join(c.outPath, r))
+					// TODO delete old one
+				}
 			}
 		}
 	}()

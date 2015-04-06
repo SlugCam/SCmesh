@@ -16,9 +16,11 @@ import (
 	"path"
 	"time"
 
+	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/util"
+	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -45,8 +47,8 @@ type RegistrationRequest struct {
 
 // meta contains the metadata for an outbound request.
 type meta struct {
-	ID   uint32
-	Size uint32
+	FileID int64
+	Size   int64
 
 	DataType    string    `json:"type"`
 	Destination uint32    `json:"destination"`
@@ -65,9 +67,9 @@ type Distributor struct {
 	outPath   string
 	metaPath  string
 	requests  chan<- meta
-	timeouts  chan<- uint32            // send filenumber to check
-	files     map[uint32]*outgoingFile // A map from file entries to metadata
-	messageID <-chan uint32
+	timeouts  chan<- int64            // send filenumber to check
+	files     map[int64]*outgoingFile // A map from file entries to metadata
+	messageID <-chan int64
 	router    pipeline.Router
 }
 
@@ -76,17 +78,18 @@ type Distributor struct {
 // should not return until the request is in a state that we can recover from in
 // the event of a system failure. In other words, once this function returns,
 // this request should be able to be forgotten by the caller.
-func (d *Distributor) Register(r RegistrationRequest) (id uint32, err error) {
+func (d *Distributor) Register(r RegistrationRequest) (fileID int64, err error) {
 	// In order to satisfy the condition that after running this function, a
 	// power failure should not cause us to fail at transmitting the data.
 
 	// First build meta
-	id = <-d.messageID
+	fileID = <-d.messageID
 
 	// If request is JSON save the json and then treat this request as a regular
 	// file.
 	if r.JSON != nil {
-		r.Path = path.Join(d.storePath, util.Utoa(id))
+		//r.Path = path.Join(d.storePath, util.Utoa(fileID))
+		r.Path = path.Join(d.storePath, fmt.Sprintf("%d", fileID))
 		r.Save = false
 		// save the JSON to the store directory and update the path
 		var b []byte
@@ -107,7 +110,7 @@ func (d *Distributor) Register(r RegistrationRequest) (id uint32, err error) {
 
 	// Encode the file, since the ID should be unique we are safe to edit these
 	// files from go routines.
-	reqOutPath := path.Join(d.outPath, util.Utoa(id))
+	reqOutPath := path.Join(d.outPath, fmt.Sprintf("%d", fileID))
 	FileToWire(r.Path, reqOutPath)
 	var fi os.FileInfo
 	fi, err = os.Stat(reqOutPath)
@@ -118,8 +121,8 @@ func (d *Distributor) Register(r RegistrationRequest) (id uint32, err error) {
 
 	// Make new metadata entry
 	m := meta{
-		ID:   id,
-		Size: uint32(encodedSize),
+		FileID: fileID,
+		Size:   encodedSize,
 
 		DataType:    r.DataType,
 		Destination: r.Destination,
@@ -129,7 +132,7 @@ func (d *Distributor) Register(r RegistrationRequest) (id uint32, err error) {
 	}
 
 	// Write metadata to file
-	reqMetaPath := path.Join(d.metaPath, util.Utoa(id))
+	reqMetaPath := path.Join(d.metaPath, fmt.Sprintf("%d", fileID))
 	mfile, err := os.Create(reqMetaPath)
 	menc := gob.NewEncoder(mfile)
 	menc.Encode(m)
@@ -143,16 +146,16 @@ func (d *Distributor) Register(r RegistrationRequest) (id uint32, err error) {
 // however writing to the distributors file record is not. This function just
 // adds the metadata and triggers a resend of the file.
 func (d *Distributor) loadMetadata(m meta) {
-	_, ok := d.files[m.ID]
+	_, ok := d.files[m.FileID]
 	if ok {
 		// Metadata already loaded
 		return
 	}
-	d.files[m.ID] = &outgoingFile{
+	d.files[m.FileID] = &outgoingFile{
 		meta:    m,
 		timeout: time.Now(),
 	}
-	d.timeouts <- m.ID
+	d.timeouts <- m.FileID
 }
 
 // TODO should error check come after processing
@@ -206,19 +209,25 @@ func scanBytes(r *bufio.Reader) (data []byte, n int, eof bool, err error) {
 }
 
 // TODO better error checking
-func (d *Distributor) sendRemaining(id uint32) {
-	f := d.files[id]
+func (d *Distributor) sendRemaining(fileID int64) {
+	f := d.files[fileID]
 
 	// TODO check if we are complete here, not at ACK
 	// make packet, send it off
 
 	dh := header.DataHeader{
 		Destinations: []uint32{f.meta.Destination},
-		Type:         header.DataHeader_MESSAGE.Enum(),
-		// TODO timestamp, type ->string, size
+		Type:         header.DataHeader_FILE.Enum(),
+		FileHeader: &header.FileHeader{
+			FileId:    proto.Int64(fileID),
+			FileSize:  proto.Int64(f.meta.Size),
+			Type:      proto.String(f.meta.DataType),
+			Timestamp: proto.Int64(f.meta.Timestamp.Unix()),
+		},
 	}
 	offset := 0
-	dataFile, _ := os.Open(f.meta.Path)
+	outpath := path.Join(d.outPath, fmt.Sprintf("%d", fileID))
+	dataFile, _ := os.Open(outpath)
 	// TODO check err
 	r := bufio.NewReader(dataFile)
 	first := true
@@ -230,7 +239,7 @@ func (d *Distributor) sendRemaining(id uint32) {
 		offset += n
 		if first {
 			first = false
-			if uint32(n) == f.meta.Size {
+			if int64(n) == f.meta.Size {
 				break
 				// TODO file is done according to us
 			}
@@ -247,20 +256,20 @@ func (d *Distributor) sendRemaining(id uint32) {
 	// set timeout
 	f.timeout = time.Now().Add(FIRST_TIMEOUT)
 	time.AfterFunc(FIRST_TIMEOUT, func() {
-		d.timeouts <- id
+		d.timeouts <- fileID
 	})
 
 }
 
-func (d *Distributor) checkTimeout(id uint32) {
-	f, ok := d.files[id]
+func (d *Distributor) checkTimeout(fileID int64) {
+	f, ok := d.files[fileID]
 	if !ok || time.Now().Before(f.timeout) {
 		return
 	}
-	d.sendRemaining(id)
+	d.sendRemaining(fileID)
 }
 
-func (d *Distributor) receiveACK(ack ACK) {
+func (d *Distributor) receiveACK(packet.Packet) {
 	// If ACK denotates completed data delete the entry
 
 	// update bitmap
@@ -277,15 +286,15 @@ func (d *Distributor) receiveACK(ack ACK) {
 	*/
 }
 
-func Distribute(pathPrefix string, router pipeline.Router, incomingACKs <-chan ACK) (d *Distributor, err error) {
+func Distribute(pathPrefix string, incomingPackets <-chan packet.Packet, router pipeline.Router) (d *Distributor, err error) {
 	d = new(Distributor)
 
 	requests := make(chan meta, REQUEST_BUFFER_SIZE)
-	timeouts := make(chan uint32, TIMEOUT_BUFFER_SIZE)
+	timeouts := make(chan int64, TIMEOUT_BUFFER_SIZE)
 
 	d.requests = requests
 	d.timeouts = timeouts
-	d.files = make(map[uint32]*outgoingFile)
+	d.files = make(map[int64]*outgoingFile)
 
 	d.metaPath = path.Join(pathPrefix, DIST_META_PATH)
 	d.outPath = path.Join(pathPrefix, DIST_OUT_PATH)
@@ -312,7 +321,7 @@ func Distribute(pathPrefix string, router pipeline.Router, incomingACKs <-chan A
 	}
 
 	// Start the counter
-	d.messageID = util.RunCounterUint32(counterPath)
+	d.messageID = util.RunCounterInt64(counterPath)
 
 	// Main loop
 	go func() {
@@ -322,9 +331,9 @@ func Distribute(pathPrefix string, router pipeline.Router, incomingACKs <-chan A
 				// Registration requests
 				d.loadMetadata(rr)
 
-			case ack := <-incomingACKs:
+			case p := <-incomingPackets:
 				// Acknowledgement received
-				d.receiveACK(ack)
+				d.receiveACK(p)
 
 			case fileID := <-timeouts:
 				d.checkTimeout(fileID)

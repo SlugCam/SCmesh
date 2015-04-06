@@ -2,29 +2,41 @@ package escrow
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
 
+	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/golang/protobuf/proto"
 )
 
 type MockRouter struct {
-	id uint32
+	id  uint32
+	out chan packet.Packet
 }
 
 func NewMockRouter(id uint32) *MockRouter {
 	r := &MockRouter{
-		id: id,
+		id:  id,
+		out: make(chan packet.Packet, 1000),
 	}
 	return r
 }
-
 func (r *MockRouter) LocalID() uint32 {
 	return r.id
 }
 func (r *MockRouter) OriginateDSR(dest, offset uint32, dataHeader header.DataHeader, data []byte) {
-
+	// Make new packet
+	p := packet.NewPacket()
+	//p.Header.DsrHeader = new(header.DSRHeader)
+	p.Header.Source = proto.Uint32(r.id)
+	p.Header.DataHeader = &dataHeader
+	p.Payload = data
+	// Send packet to out channel
+	fmt.Println(p)
+	r.out <- *p
 }
 
 func (r *MockRouter) OriginateFlooding(TTL int, dataHeader header.DataHeader, data []byte) {
@@ -37,11 +49,19 @@ func TestEscrow(t *testing.T) {
 		t.Fatal("error making tmp directory to run test in.")
 	}
 
-	r := NewMockRouter(0)
+	r1 := NewMockRouter(1)
+	r2 := NewMockRouter(2)
 
-	acks := make(chan ACK)
+	out := make(chan CollectedData)
 
-	d, err := Distribute(dir, r, acks)
+	// Distribute
+	d, err := Distribute(dir, r2.out, r1)
+	if err != nil {
+		t.Fatal("Error in Distribute:", err)
+	}
+
+	// Collect
+	_, err = Collect(dir, r1.out, out, r2)
 	if err != nil {
 		t.Fatal("Error in Distribute:", err)
 	}
@@ -56,5 +76,5 @@ func TestEscrow(t *testing.T) {
 	if err != nil {
 		t.Fatal("Error in Register:", err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(7 * time.Second)
 }
