@@ -12,6 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/SlugCam/SCmesh/util"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -74,10 +75,10 @@ func (p *Packet) Pack(out chan<- []byte) {
 	if err != nil {
 		log.Fatal("marshaling error: ", err)
 	}
-	encodedHeader := encode(serializedHeader)
+	encodedHeader := util.Encode(serializedHeader)
 
 	headerSize := len(encodedHeader)
-	maxPreheaderSize := maxEncodedLen(SERIALIZED_PREHEADER_SIZE)
+	maxPreheaderSize := util.MaxEncodedLen(SERIALIZED_PREHEADER_SIZE)
 	delimiterSize := 4
 	maxPayloadSize := MAX_PACKET_LEN - delimiterSize - headerSize - maxPreheaderSize
 
@@ -88,7 +89,7 @@ func (p *Packet) Pack(out chan<- []byte) {
 		newPreheader := p.Preheader // Will make a copy of the preheader
 		newPreheader.PayloadOffset = int64(originalOffset + relativeOffset)
 		serializedPreheader := newPreheader.Serialize()
-		encodedPreheader := encode(serializedPreheader)
+		encodedPreheader := util.Encode(serializedPreheader)
 
 		// Fit Payload
 		remainingPayloadLen := payloadLen - relativeOffset
@@ -131,7 +132,7 @@ func (raw *RawPacket) Parse() (pack Packet, err error) {
 	log.Debug("Parsing this raw packet:", raw)
 
 	// Decode preheader
-	decodedPreheader, err := decode(raw.Preheader)
+	decodedPreheader, err := util.Decode(raw.Preheader)
 	if err != nil {
 		return
 	}
@@ -153,7 +154,7 @@ func (raw *RawPacket) Parse() (pack Packet, err error) {
 
 	// TODO If receiver is incorrect we can drop (or continue if peeking is desired)
 
-	serializedHeader, err := decode(raw.Header)
+	serializedHeader, err := util.Decode(raw.Header)
 	if err != nil {
 		return
 	}
