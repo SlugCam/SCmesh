@@ -18,7 +18,6 @@ const (
 // These path constants will be relative to the prefix provided to the
 // distribute function.
 const (
-	//PATH_PREFIX     = "/var/SlugCam/SCmesh"
 	DIST_COUNTER_PATH = "d.count"
 	DIST_STORE_PATH   = "d.store"
 	DIST_OUT_PATH     = "d.out"

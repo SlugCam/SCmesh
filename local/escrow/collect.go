@@ -23,7 +23,7 @@ type CollectedData struct {
 	Timestamp time.Time `json:"timestamp"`
 	Path      string    `json:"path"`
 }
-type CollectedMeta struct {
+type collectedMeta struct {
 	DataType  string
 	Size      int64
 	Timestamp time.Time
@@ -82,7 +82,7 @@ func (c *Collector) processPacket(p packet.Packet) error {
 	_, err := os.Stat(metaFilePath)
 	if err != nil && os.IsNotExist(err) {
 		// Save meta
-		meta := CollectedMeta{
+		meta := collectedMeta{
 			DataType:  *dh.Type,
 			Size:      *dh.FileSize,
 			Timestamp: time.Unix(*dh.Timestamp, 0),
