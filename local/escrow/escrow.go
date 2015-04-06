@@ -27,3 +27,16 @@ const (
 const (
 	COL_FILE_SCAN_TIMEOUT = 5 * time.Second
 )
+
+// For distribute
+const (
+	MAX_PAYLOAD_SIZE    = 512
+	REQUEST_BUFFER_SIZE = 100
+	TIMEOUT_BUFFER_SIZE = 10
+)
+
+// TODO priorities for distribute
+const (
+	FIRST_TIMEOUT = 10 * time.Second // Time to wa
+	ACK_TIMEOUT   = 5 * time.Second
+)

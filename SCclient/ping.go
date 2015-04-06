@@ -26,7 +26,7 @@ const FLOOD_PING = `
 func ping(flood bool) {
 	conn, err := net.Dial("unix", SCMESH_CTRL)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error opening power socket: %s\n", err)
+		fmt.Fprintf(os.Stderr, "error opening SCMESH_CTRL: %s\n", err)
 		return
 	}
 	defer conn.Close()

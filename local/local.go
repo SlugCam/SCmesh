@@ -55,9 +55,9 @@ func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 
 			switch *p.Header.DataHeader.Type {
 			case header.DataHeader_FILE:
-				packetsToDistribute <- p
-			case header.DataHeader_ACK:
 				packetsToCollect <- p
+			case header.DataHeader_ACK:
+				packetsToDistribute <- p
 			case header.DataHeader_MESSAGE:
 			}
 		}

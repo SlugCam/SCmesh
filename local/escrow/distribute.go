@@ -25,18 +25,6 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-const (
-	MAX_PAYLOAD_SIZE    = 512
-	REQUEST_BUFFER_SIZE = 100
-	TIMEOUT_BUFFER_SIZE = 10
-)
-
-// TODO priorities
-const (
-	FIRST_TIMEOUT = 30 * time.Second // Time to wa
-	ACK_TIMEOUT   = 10 * time.Second
-)
-
 // RegistrationRequest contains the data necessary to register a file to send.
 type RegistrationRequest struct {
 	DataType    string           `json:"type"`

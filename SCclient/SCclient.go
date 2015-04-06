@@ -49,6 +49,12 @@ func main() {
 			ping(true)
 		case "ping-dsr":
 			ping(false)
+		case "send-video":
+			if len(args) >= 2 {
+				sendVideo(args[1])
+			} else {
+				fmt.Fprintf(os.Stderr, "command \"%s\" missing arguments\n", command)
+			}
 		case "batt":
 			getBattery()
 		default:
