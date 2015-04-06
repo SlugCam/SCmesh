@@ -15,13 +15,7 @@ type Command struct {
 	Options interface{} `json:"options"`
 }
 
-func sendVideo(path string) {
-	conn, err := net.Dial("unix", SCMESH_CTRL)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error opening SCMESH_CTRL: %s\n", err)
-		return
-	}
-	defer conn.Close()
+func sendVideo(conn net.Conn, path string) {
 	rr := Command{
 		Command: "register",
 		Options: escrow.RegistrationRequest{

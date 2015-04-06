@@ -204,6 +204,12 @@ func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<-
 				} else if finished {
 					// TODO, check if file exists
 					FileFromWire(path.Join(c.storePath, r), path.Join(c.outPath, r))
+					// TODO fix
+					out <- CollectedData{
+						DataType:  "TEST",
+						Path:      "TEST",
+						Timestamp: time.Now(),
+					}
 					// TODO delete old one
 				}
 			}

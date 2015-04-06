@@ -27,7 +27,26 @@ type PowerResp struct {
 }
 
 func main() {
-	fmt.Fprintf(os.Stderr, "scclient, enter help to see help\n")
+	fmt.Fprintf(os.Stderr, "SCclient, enter help to see help\n")
+
+	conn, err := net.Dial("unix", SCMESH_CTRL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error opening SCMESH_CTRL: %s\n", err)
+		return
+	}
+	defer conn.Close()
+
+	// Read incoming messages from connection
+	go func() {
+		b := make([]byte, 4096)
+		for {
+			n, err := conn.Read(b)
+			fmt.Println(b[:n])
+			if err != nil {
+				break
+			}
+		}
+	}()
 
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("> ")
@@ -46,12 +65,12 @@ func main() {
 		case "help":
 			fmt.Fprintf(os.Stderr, HELP)
 		case "ping-flood":
-			ping(true)
+			ping(conn, true)
 		case "ping-dsr":
-			ping(false)
+			ping(conn, false)
 		case "send-video":
 			if len(args) >= 2 {
-				sendVideo(args[1])
+				sendVideo(conn, args[1])
 			} else {
 				fmt.Fprintf(os.Stderr, "command \"%s\" missing arguments\n", command)
 			}
@@ -63,7 +82,7 @@ func main() {
 		fmt.Print("> ")
 	}
 
-	err := scanner.Err()
+	err = scanner.Err()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error scanning stdin:", err)
 		os.Exit(1)

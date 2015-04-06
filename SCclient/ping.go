@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 )
 
 const DSR_PING = `
@@ -23,18 +22,10 @@ const FLOOD_PING = `
 }
 `
 
-func ping(flood bool) {
-	conn, err := net.Dial("unix", SCMESH_CTRL)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error opening SCMESH_CTRL: %s\n", err)
-		return
-	}
-	defer conn.Close()
-
+func ping(conn net.Conn, flood bool) {
 	if flood {
 		fmt.Fprintf(conn, FLOOD_PING)
 	} else {
 		fmt.Fprintf(conn, DSR_PING)
-
 	}
 }
