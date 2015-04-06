@@ -1,5 +1,7 @@
 /*
 The package escrow includes the reliability layer for the SCmesh system.
+TODO will the filesystem handle enough files, maybe break into separate files
+TODO make sure everything is clean
 */
 package escrow
 
@@ -17,10 +19,10 @@ const (
 // distribute function.
 const (
 	//PATH_PREFIX     = "/var/SlugCam/SCmesh"
-	DIST_COUNTER_PATH = "count"
-	DIST_STORE_PATH   = "store"
-	DIST_OUT_PATH     = "out"
-	DIST_META_PATH    = "meta"
+	DIST_COUNTER_PATH = "d.count"
+	DIST_STORE_PATH   = "d.store"
+	DIST_OUT_PATH     = "d.out"
+	DIST_META_PATH    = "d.meta"
 )
 
 const (
