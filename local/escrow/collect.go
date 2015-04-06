@@ -99,8 +99,8 @@ func (c *Collector) processPacket(p packet.Packet) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	// copy data to file
-	log.Info("PAYLOAD:", p.Payload)
 	_, err = f.WriteAt(p.Payload, p.Preheader.PayloadOffset)
 	if err != nil {
 		return err

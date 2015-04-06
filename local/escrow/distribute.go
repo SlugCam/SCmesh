@@ -16,6 +16,8 @@ import (
 	"path"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/SlugCam/SCmesh/pipeline"
@@ -134,8 +136,18 @@ func (d *Distributor) Register(r RegistrationRequest) (fileID int64, err error) 
 	// Write metadata to file
 	reqMetaPath := path.Join(d.metaPath, fmt.Sprintf("%d", fileID))
 	mfile, err := os.Create(reqMetaPath)
+	if err != nil {
+		log.Error("Register: ", err)
+		return
+	}
+	defer mfile.Close()
 	menc := gob.NewEncoder(mfile)
-	menc.Encode(m)
+
+	err = menc.Encode(m)
+	if err != nil {
+		log.Error("Register: ", err)
+		return
+	}
 
 	d.requests <- m
 	return
@@ -162,7 +174,7 @@ func (d *Distributor) loadMetadata(m meta) {
 // TODO Check for errors
 // Returns whether eof was encountered and an error if there is one. Note that
 // in go n is initialized to 0, eof to false, and err to nil.
-func scanNull(r *bufio.Reader) (n int, eof bool, err error) {
+func scanNull(r *bufio.Reader) (n int64, eof bool, err error) {
 	var c byte
 	for {
 		c, err = r.ReadByte()
@@ -183,7 +195,7 @@ func scanNull(r *bufio.Reader) (n int, eof bool, err error) {
 	}
 }
 
-func scanBytes(r *bufio.Reader) (data []byte, n int, eof bool, err error) {
+func scanBytes(r *bufio.Reader) (data []byte, n int64, eof bool, err error) {
 	var c byte
 	for {
 		c, err = r.ReadByte()
@@ -225,10 +237,16 @@ func (d *Distributor) sendRemaining(fileID int64) {
 			Timestamp: proto.Int64(f.meta.Timestamp.Unix()),
 		},
 	}
-	offset := 0
+	offset := int64(0)
 	outpath := path.Join(d.outPath, fmt.Sprintf("%d", fileID))
-	dataFile, _ := os.Open(outpath)
-	// TODO check err
+
+	dataFile, err := os.Open(outpath)
+	if err != nil {
+		log.Error("sendRemaining: ", err)
+		return
+	}
+	defer dataFile.Close()
+
 	r := bufio.NewReader(dataFile)
 	first := true
 	for {
@@ -246,7 +264,7 @@ func (d *Distributor) sendRemaining(fileID int64) {
 		}
 		b, n, eof, err := scanBytes(r)
 
-		d.router.OriginateDSR(f.meta.Destination, uint32(offset), dh, b)
+		d.router.OriginateDSR(f.meta.Destination, offset, dh, b)
 		if err != nil || eof {
 			break
 		}
@@ -269,21 +287,45 @@ func (d *Distributor) checkTimeout(fileID int64) {
 	d.sendRemaining(fileID)
 }
 
-func (d *Distributor) receiveACK(packet.Packet) {
+func (d *Distributor) receiveACK(p packet.Packet) {
+	ack, err := parseACK(p)
+	if err != nil {
+		log.Error("receiveACK: ", err)
+		return
+	}
 	// If ACK denotates completed data delete the entry
 
 	// update bitmap
-
+	outPath := path.Join(d.outPath, fmt.Sprintf("%d", ack.FileID))
+	f, err := os.OpenFile(outPath, os.O_WRONLY, 0660)
+	if err != nil {
+		log.Error("receiveACK: ", err)
+		return
+	}
+	defer f.Close()
+	// copy data to file
+	o, err := f.Seek(ack.Offset, 0)
+	if err != nil || o != ack.Offset {
+		log.Error("receiveACK: Could not seek to proper offset in file")
+		return
+	}
+	for i := 0; i < ack.Size; i++ {
+		// TODO check n
+		_, err := f.Write([]byte{0})
+		if err != nil {
+			log.Error("receiveACK: Could not write null byte to file: ", err)
+			return
+		}
+	}
 	// check if fully acknowledged
 
 	// if not reset timeout timer
 
-	/* set timeout
-	f.timeout = time.Now().Add(ACK_TIMEOUT)
+	// TODO check if file exists
+	d.files[ack.FileID].timeout = time.Now().Add(ACK_TIMEOUT)
 	time.AfterFunc(ACK_TIMEOUT, func() {
-		d.timeouts <- id
+		d.timeouts <- ack.FileID
 	})
-	*/
 }
 
 func Distribute(pathPrefix string, incomingPackets <-chan packet.Packet, router pipeline.Router) (d *Distributor, err error) {

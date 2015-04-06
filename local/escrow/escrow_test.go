@@ -27,7 +27,7 @@ func NewMockRouter(id uint32) *MockRouter {
 func (r *MockRouter) LocalID() uint32 {
 	return r.id
 }
-func (r *MockRouter) OriginateDSR(dest, offset uint32, dataHeader header.DataHeader, data []byte) {
+func (r *MockRouter) OriginateDSR(dest uint32, offset int64, dataHeader header.DataHeader, data []byte) {
 	// Make new packet
 	p := packet.NewPacket()
 	//p.Header.DsrHeader = new(header.DSRHeader)
