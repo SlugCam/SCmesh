@@ -15,7 +15,7 @@ const BROADCAST_ID = NodeID(0xFFFF)
 // module from outside.
 type OriginationRequest struct {
 	Destination NodeID
-	Offset      uint32
+	Offset      int64
 	DataHeader  header.DataHeader
 	Data        []byte
 }

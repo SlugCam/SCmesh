@@ -31,7 +31,7 @@ func (r *Router) LocalID() uint32 {
 // OriginateDSR sends data using the DSR routing scheme. Not that as with
 // flooding, the destination field must be set in the data header for any node
 // to process its payload.
-func (r *Router) OriginateDSR(dest, offset uint32, dataHeader header.DataHeader, data []byte) {
+func (r *Router) OriginateDSR(dest uint32, offset int64, dataHeader header.DataHeader, data []byte) {
 	log.Debug("OriginateDSR called")
 	r.originateDSR <- dsr.OriginationRequest{
 		Destination: dsr.NodeID(dest),

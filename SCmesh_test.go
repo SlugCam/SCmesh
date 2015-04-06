@@ -44,7 +44,7 @@ func TestDSROrigination(t *testing.T) {
 	}
 
 	// t1
-	n1.Router.OriginateDSR(uint32(3), uint32(0), dh, []byte{0})
+	n1.Router.OriginateDSR(uint32(3), int64(0), dh, []byte{0})
 
 	// n2 gets route request
 	select {

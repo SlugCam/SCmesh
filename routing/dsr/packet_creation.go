@@ -34,6 +34,7 @@ func newOriginationPacket(o OriginationRequest) *packet.Packet {
 	p := newDSRPacket()
 	p.Header.DataHeader = &o.DataHeader
 	p.Payload = o.Data
+	p.Preheader.PayloadOffset = o.Offset
 	return p
 }
 
