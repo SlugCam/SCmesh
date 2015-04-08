@@ -213,13 +213,14 @@ func (m *DataHeader) GetFileHeader() *FileHeader {
 }
 
 type DSRHeader struct {
-	RouteRequest          *DSRHeader_RouteRequest           `protobuf:"bytes,1,opt,name=route_request" json:"route_request,omitempty"`
-	RouteReply            *DSRHeader_RouteReply             `protobuf:"bytes,2,opt,name=route_reply" json:"route_reply,omitempty"`
-	NodeUnreachableErrors []*DSRHeader_NodeUnreachableError `protobuf:"bytes,3,rep,name=node_unreachable_errors" json:"node_unreachable_errors,omitempty"`
-	AckRequest            *DSRHeader_AckRequest             `protobuf:"bytes,4,opt,name=ack_request" json:"ack_request,omitempty"`
-	Ack                   []*DSRHeader_Ack                  `protobuf:"bytes,5,rep,name=ack" json:"ack,omitempty"`
-	SourceRoute           *DSRHeader_SourceRoute            `protobuf:"bytes,6,opt,name=source_route" json:"source_route,omitempty"`
-	XXX_unrecognized      []byte                            `json:"-"`
+	RouteRequest *DSRHeader_RouteRequest `protobuf:"bytes,1,opt,name=route_request" json:"route_request,omitempty"`
+	RouteReply   *DSRHeader_RouteReply   `protobuf:"bytes,2,opt,name=route_reply" json:"route_reply,omitempty"`
+	// should also be repeated
+	NodeUnreachableError *DSRHeader_NodeUnreachableError `protobuf:"bytes,3,opt,name=node_unreachable_error" json:"node_unreachable_error,omitempty"`
+	AckRequest           *DSRHeader_AckRequest           `protobuf:"bytes,4,opt,name=ack_request" json:"ack_request,omitempty"`
+	Ack                  *DSRHeader_Ack                  `protobuf:"bytes,5,opt,name=ack" json:"ack,omitempty"`
+	SourceRoute          *DSRHeader_SourceRoute          `protobuf:"bytes,6,opt,name=source_route" json:"source_route,omitempty"`
+	XXX_unrecognized     []byte                          `json:"-"`
 }
 
 func (m *DSRHeader) Reset()         { *m = DSRHeader{} }
@@ -240,9 +241,9 @@ func (m *DSRHeader) GetRouteReply() *DSRHeader_RouteReply {
 	return nil
 }
 
-func (m *DSRHeader) GetNodeUnreachableErrors() []*DSRHeader_NodeUnreachableError {
+func (m *DSRHeader) GetNodeUnreachableError() *DSRHeader_NodeUnreachableError {
 	if m != nil {
-		return m.NodeUnreachableErrors
+		return m.NodeUnreachableError
 	}
 	return nil
 }
@@ -254,7 +255,7 @@ func (m *DSRHeader) GetAckRequest() *DSRHeader_AckRequest {
 	return nil
 }
 
-func (m *DSRHeader) GetAck() []*DSRHeader_Ack {
+func (m *DSRHeader) GetAck() *DSRHeader_Ack {
 	if m != nil {
 		return m.Ack
 	}
@@ -363,6 +364,7 @@ func (m *DSRHeader_NodeUnreachableError) GetUnreachableNodeAddress() uint32 {
 
 type DSRHeader_AckRequest struct {
 	Identification   *uint32 `protobuf:"varint,1,req,name=identification" json:"identification,omitempty"`
+	Source           *uint32 `protobuf:"varint,2,req,name=source" json:"source,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -373,6 +375,13 @@ func (*DSRHeader_AckRequest) ProtoMessage()    {}
 func (m *DSRHeader_AckRequest) GetIdentification() uint32 {
 	if m != nil && m.Identification != nil {
 		return *m.Identification
+	}
+	return 0
+}
+
+func (m *DSRHeader_AckRequest) GetSource() uint32 {
+	if m != nil && m.Source != nil {
+		return *m.Source
 	}
 	return 0
 }

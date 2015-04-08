@@ -30,6 +30,32 @@ func newRouteRequest(source NodeID, dest NodeID) *packet.Packet {
 	return p
 }
 
+func newErrorPacket(source, dest uint32, errHeader *header.DSRHeader_NodeUnreachableError) *packet.Packet {
+	p := newDSRPacket()
+	p.Header.Source = proto.Uint32(uint32(source))
+	p.Header.Destination = proto.Uint32(uint32(dest))
+
+	p.Header.DsrHeader.NodeUnreachableError = errHeader
+
+	return p
+
+}
+
+func newAckPacket(source NodeID, dest NodeID, id uint32) *packet.Packet {
+	p := newDSRPacket()
+	p.Header.Source = proto.Uint32(uint32(source))
+	p.Preheader.Receiver = uint32(dest)
+
+	ah := new(header.DSRHeader_Ack)
+	p.Header.DsrHeader.Ack = ah
+
+	ah.Identification = proto.Uint32(id) // TODO not random
+	ah.Source = proto.Uint32(uint32(source))
+	ah.Destination = proto.Uint32(uint32(dest))
+
+	return p
+}
+
 func newOriginationPacket(o OriginationRequest) *packet.Packet {
 	p := newDSRPacket()
 	p.Header.DataHeader = &o.DataHeader

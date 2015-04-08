@@ -59,10 +59,12 @@ message DSRHeader {
         required uint32 destination = 3;
         required uint32 unreachable_node_address = 4;
     }
-    repeated NodeUnreachableError node_unreachable_errors = 3;
+    // should also be repeated
+    optional NodeUnreachableError node_unreachable_error = 3;
 
     message AckRequest {
         required uint32 identification = 1; 
+        required uint32 source = 2; // not correct
     }
     optional AckRequest ack_request = 4;
 
@@ -71,7 +73,7 @@ message DSRHeader {
         required uint32 source = 2; // node originating ack
         required uint32 destination = 3;
     }
-    repeated Ack ack = 5;
+    optional Ack ack = 5; // should be repeated
 
     message SourceRoute {
         required uint32 salvage = 1;

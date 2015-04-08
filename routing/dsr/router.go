@@ -1,13 +1,18 @@
 package dsr
 
 import (
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet"
+	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/SlugCam/SCmesh/util"
 	"github.com/golang/protobuf/proto"
 )
 
 // These data structures could be optimized
 type router struct {
+	liveLinks    map[uint32]linkMaint
 	localID      NodeID
 	routeCache   *routeCache
 	sendBuffer   *sendBuffer
@@ -21,6 +26,7 @@ func newRouter(localID NodeID, out chan<- packet.Packet) *router {
 	r.routeCache = newRouteCache()
 	r.sendBuffer = newSendBuffer()
 	r.requestTable = newRequestTable()
+	r.liveLinks = make(map[uint32]linkMaint)
 	r.out = out
 	return r
 }
@@ -52,6 +58,33 @@ func (r *router) originate(o OriginationRequest) {
 		// Output packet
 		r.out <- *packet
 	}
+}
+
+// TODO combine both
+func (r *router) originatePacket(p *packet.Packet) {
+	if p.Header == nil || p.Header.Destination == nil {
+		log.Error("originateExisting: improper packet format, dropping packet")
+		return
+	}
+	dest := *p.Header.Destination
+	p.Header.Source = proto.Uint32(uint32(r.localID))
+	// Check route cache for destination in packet header
+	route := r.routeCache.getRoute(NodeID(dest))
+	if route == nil {
+		// If no route found perform route discovery
+		r.sendBuffer.addPacket(p)
+		// TODO initiateRouteDiscovery
+		r.requestDiscovery(NodeID(dest))
+	} else {
+		// Otherwise add source route option to packet
+		err := addSourceRoute(p, route)
+		if err != nil {
+			log.Error("DSR originate:", err)
+		}
+		// Output packet
+		r.out <- *p
+	}
+
 }
 
 // DISCOVERY FUNCTIONS
@@ -97,6 +130,9 @@ func (r *router) forward(p packet.Packet) {
 	}
 	// TODO process route reply
 	r.processRouteReply(&p)
+	r.processAckRequest(&p)
+	r.processAck(&p)
+	r.processRouteError(&p)
 
 	// Only forward if we were the receiver in the first place, broadcast not
 	// valid for source route anyway.
@@ -108,8 +144,56 @@ func (r *router) forward(p packet.Packet) {
 
 func (r *router) sendAlongSourceRoute(p *packet.Packet) {
 	if processSourceRoute(p) {
+		r.addAckRequest(p)
 		log.Info("processRouteRequest: sending:", p)
 		r.out <- *p
+	}
+}
+
+const ERROR_REPORTING_TIMEOUT = 2 * time.Second
+
+func (r *router) addAckRequest(p *packet.Packet) {
+	id := util.RandomUint32()
+	p.Header.DsrHeader.AckRequest = &header.DSRHeader_AckRequest{
+		Identification: proto.Uint32(id),
+		Source:         proto.Uint32(uint32(r.localID)),
+	}
+	// Make entry tracking acks outstanding
+	ll, ok := r.liveLinks[p.Preheader.Receiver]
+	if ok {
+		switch {
+		case ll.sentBeforeSetTimeout < 3:
+			ll.sentBeforeSetTimeout += 1
+
+		case ll.sentBeforeSetTimeout == 3:
+			ll.sentBeforeSetTimeout += 1
+			// set timeout
+			t := time.Now().Add(ERROR_REPORTING_TIMEOUT)
+			ll.timeout = &t
+
+		case ll.sentBeforeSetTimeout > 3:
+			if ll.timeout != nil {
+				if time.Now().After(*ll.timeout) {
+					// TODO send route error
+					r.routeCache.removeNeighbor(NodeID(p.Preheader.Receiver))
+					if p.Header.Destination != nil {
+						r.originatePacket(newErrorPacket(uint32(r.localID), *p.Header.Destination, &header.DSRHeader_NodeUnreachableError{
+							Salvage:                proto.Uint32(uint32(0)),
+							Source:                 proto.Uint32(uint32(r.localID)),
+							Destination:            p.Header.Destination,
+							UnreachableNodeAddress: proto.Uint32(uint32(p.Preheader.Receiver)),
+						}))
+					}
+				}
+			}
+		}
+	} else {
+		nl := linkMaint{
+			sentBeforeSetTimeout: 1,
+			timeout:              nil,
+		}
+
+		r.liveLinks[p.Preheader.Receiver] = nl
 	}
 }
 
@@ -236,5 +320,56 @@ func (r *router) processRouteRequest(p *packet.Packet) bool {
 	// TODO BROADCAST JITTER
 	r.out <- *p
 	return false
+
+}
+
+func (r *router) processAck(p *packet.Packet) {
+	ack := p.Header.DsrHeader.Ack
+	if ack == nil {
+		return
+	}
+
+	// Drop request
+	p.Header.DsrHeader.Ack = nil
+	ll, ok := r.liveLinks[*ack.Source]
+	if ok {
+		ll.sentBeforeSetTimeout = 0
+		ll.timeout = nil
+	}
+}
+func (r *router) processRouteError(p *packet.Packet) {
+	re := p.Header.DsrHeader.NodeUnreachableError
+	if re == nil {
+		return
+	}
+
+	// Drop request
+	if *re.Destination == uint32(r.localID) {
+		p.Header.DsrHeader.NodeUnreachableError = nil
+	}
+
+	r.routeCache.removeLink(*re.Source, *re.UnreachableNodeAddress)
+}
+
+func (r *router) processAckRequest(p *packet.Packet) {
+	ar := p.Header.DsrHeader.AckRequest
+	if ar == nil {
+		return
+	}
+
+	// Drop request
+	p.Header.DsrHeader.AckRequest = nil
+
+	// Must be next hop in addresses or destination of packet
+	// TODO don't check receiver, listen to RFC
+	// TODO should we drop ACK request
+	if p.Preheader.Receiver != uint32(r.localID) {
+		return
+	}
+	if p.Header.DsrHeader.Ack != nil {
+		return
+	}
+
+	r.out <- *newAckPacket(r.localID, NodeID(*ar.Source), *ar.Identification)
 
 }

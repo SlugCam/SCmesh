@@ -37,6 +37,36 @@ func (c *routeCache) addRoute(route []NodeID, cost int) {
 	})
 }
 
+func (c *routeCache) removeLink(a, b uint32) {
+	for e := c.l.Front(); e != nil; e = e.Next() {
+		curEntry := e.Value.(cacheEntry)
+		curRoute := curEntry.route
+		lastWasA := false
+		for _, id := range curRoute {
+			if id == NodeID(a) {
+				lastWasA = true
+			} else {
+				if id == NodeID(b) && lastWasA {
+					c.l.Remove(e)
+					break
+				}
+				lastWasA = false
+			}
+		}
+	}
+}
+
+func (c *routeCache) removeNeighbor(neighbor NodeID) {
+
+	for e := c.l.Front(); e != nil; e = e.Next() {
+		curEntry := e.Value.(cacheEntry)
+		curRoute := curEntry.route
+		if len(curRoute) > 0 && curRoute[0] == neighbor {
+			c.l.Remove(e)
+		}
+	}
+}
+
 // getRoute looks into the route cache and returns shortest path. Returns nil if
 // no route is found. The route is returned as specified by the DSR specs of
 // what a route in a source route should look like, meaning the source and

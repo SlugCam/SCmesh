@@ -1,6 +1,8 @@
 package dsr
 
 import (
+	"time"
+
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
 )
@@ -9,6 +11,11 @@ type NodeID uint32
 type Route []NodeID
 
 const BROADCAST_ID = NodeID(0xFFFF)
+
+type linkMaint struct {
+	sentBeforeSetTimeout int
+	timeout              *time.Time
+}
 
 // OriginationRequest is a struct used to describe a new packet we should
 // originate. They are used in RoutePackets to provide communication to this
