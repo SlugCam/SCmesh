@@ -10,6 +10,8 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+const ERROR_REPORTING_TIMEOUT = 2 * time.Second
+
 // These data structures could be optimized
 type router struct {
 	liveLinks    map[uint32]linkMaint
@@ -149,8 +151,6 @@ func (r *router) sendAlongSourceRoute(p *packet.Packet) {
 		r.out <- *p
 	}
 }
-
-const ERROR_REPORTING_TIMEOUT = 2 * time.Second
 
 func (r *router) addAckRequest(p *packet.Packet) {
 	id := util.RandomUint32()

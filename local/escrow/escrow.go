@@ -37,6 +37,6 @@ const (
 
 // TODO priorities for distribute
 const (
-	FIRST_TIMEOUT = 10 * time.Second // Time to wa
-	ACK_TIMEOUT   = 5 * time.Second
+	FIRST_TIMEOUT = 5 * time.Second // Time to wa
+	ACK_TIMEOUT   = 4 * time.Second
 )
