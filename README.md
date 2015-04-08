@@ -10,7 +10,7 @@ SCmesh is a daemon that implements mesh networking over a serial based wireless 
 
 ## WiFly Configuration
 
-These steps should get the WiFly (in particular the RN-171) ready to run this software.
+These steps should get the WiFly (in particular the RN-171) ready to run this software. Note that a tool to send commands to multiple serial interfaces can be useful. One trick that can be used is tmux with connections open in all the panes of a window. `:setw synchronize-panes` will then send input to all panes.
 
 First connect to the WiFly using:
 
