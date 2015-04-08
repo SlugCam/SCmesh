@@ -19,6 +19,7 @@ func main() {
 	debug := flag.Bool("debug", false, "print debug level log messages")
 	gwFlag := flag.Bool("gw", false, "run this server as a gateway")
 	messageServer := flag.String("ms", "localhost:7892", "address for the message server")
+	serialDev := flag.String("serial", "/dev/ttyAMA0", "path of the serial device to use")
 	flag.Parse()
 
 	// Modify logging level
@@ -29,7 +30,7 @@ func main() {
 	}
 
 	// Setup serial
-	c := &serial.Config{Name: "/dev/ttyAMA0", Baud: 115200}
+	c := &serial.Config{Name: *serialDev, Baud: 115200}
 	serial, err := serial.OpenPort(c)
 	if err != nil {
 		log.Panic(err)
