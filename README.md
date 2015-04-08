@@ -23,23 +23,25 @@ Now we should load the firmware version that allows ad hoc networking. First con
 
 ```
 set wlan ssid <ssid>
-set wlan auth 3
 set wlan phrase <phrase>
 join
 ```
+
+*Note:* If the WiFly is not in the default state the dhcp setting, channel, and join may need to be set. Join 1 joins saved config on reboot. Chan 0 is automatic.
 
 Now we need to update the firmware. These commands are from the WiFly command reference, except we use the archive directory to retrieve an older version of the firmware with ad hoc capability.
 
 ```
 set dns backup rn.microchip.com
+set ftp addr 0
 set ftp username roving
 set ftp pass Pass123
 set ftp dir <dir>
-#set ftp filename <filename>
 ftp update <filename>
+factory RESET
 ```
 
-`dir` would normally be `./public`, but we will use `./archive`. Version 2.36 is the latest version with ad hoc capability. File for RN-171 is `wifly7-236.img`.
+Some of these values may already be set. `dir` would normally be `./public`, but we will use `./archive`. Version 2.36 is the latest version with ad hoc capability. File for RN-171 is `wifly7-236.img`.
 
 If the update procedure leads to a version downgrade the configuration file may not be compatible. `del config` followed by a `reboot` will start fresh.
 
