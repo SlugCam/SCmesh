@@ -23,6 +23,23 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func TestFileTransfer(t *testing.T) {
+	log := simulation.StartNewLogger()
+	defer log.WriteToHTML("_logs/TestDSROrigination.html")
+
+	n1 := simulation.StartNewNodeLogged(uint32(1), log)
+	n2 := simulation.StartNewNodeLogged(uint32(2), log)
+	n3 := simulation.StartNewNodeLogged(uint32(3), log)
+	n4 := simulation.StartNewNodeLogged(uint32(4), log)
+
+	// Link nodes
+	n1.Link(n2)
+	n2.Link(n3)
+	n3.Link(n4)
+
+}
+
+/* Test needs restructuring
 func TestDSROrigination(t *testing.T) {
 	log := simulation.StartNewLogger()
 	defer log.WriteToHTML("_logs/TestDSROrigination.html")
@@ -106,6 +123,7 @@ func TestDSROrigination(t *testing.T) {
 		t.Fatal("n1 did not receive route reply")
 	}
 }
+*/
 
 // TestFlooding is an integration test for the flooding routing type. Unit tests
 // for flooding are in the flooding package.
