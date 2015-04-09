@@ -9,6 +9,7 @@ import (
 
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
+	"github.com/SlugCam/SCmesh/util"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -34,8 +35,9 @@ func (r *MockRouter) OriginateDSR(dest uint32, offset int64, dataHeader header.D
 	p.Header.Source = proto.Uint32(r.id)
 	p.Header.DataHeader = &dataHeader
 	p.Payload = data
+	p.Preheader.PayloadOffset = offset
 	// Send packet to out channel
-	fmt.Println(p)
+	fmt.Printf("Pre:\n%v\nHeader:\n%v\nData:\n%s\n", p.Preheader, p.Header, p.Payload)
 	r.out <- *p
 }
 
@@ -66,13 +68,22 @@ func TestEscrow(t *testing.T) {
 		t.Fatal("Error in Distribute:", err)
 	}
 
-	message := json.RawMessage(`{"test":45}`)
+	data := util.RandomSlice(1040)
+	testStruct := &struct {
+		Trial string
+		Data  []byte
+	}{"Test", data}
+
+	//message := json.RawMessage(`{"test":45}`)
+	message, err := json.Marshal(&testStruct)
+	m := json.RawMessage(message)
 	_, err = d.Register(RegistrationRequest{
 		DataType:    "message",
 		Destination: uint32(0),
 		Timestamp:   time.Now(),
-		JSON:        &message,
+		JSON:        &m,
 	})
+
 	if err != nil {
 		t.Fatal("Error in Register:", err)
 	}

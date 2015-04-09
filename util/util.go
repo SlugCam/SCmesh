@@ -12,6 +12,16 @@ func Utoa(x uint32) string {
 	return strconv.Itoa(int(x))
 }
 
+func RandomSlice(n int) []byte {
+	b := make([]byte, n)
+	a, err := rand.Read(b)
+	if err != nil || a != n {
+		log.Panic("Error producing random slice: ", err)
+	}
+	return b
+
+}
+
 func RandomUint32() uint32 {
 	b := make([]byte, 4)
 	_, err := rand.Read(b)
