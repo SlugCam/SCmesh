@@ -253,6 +253,7 @@ func (d *Distributor) sendRemaining(fileID int64) {
 		b, n, eof, err := scanBytes(r)
 
 		d.router.OriginateDSR(f.meta.Destination, offset, dh, b)
+
 		if err != nil || eof {
 			break
 		}

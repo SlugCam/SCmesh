@@ -36,6 +36,7 @@ func (r *Router) OriginateDSR(dest uint32, offset int64, dataHeader header.DataH
 	r.originateDSR <- dsr.OriginationRequest{
 		Destination: dsr.NodeID(dest),
 		DataHeader:  dataHeader,
+		Offset:      offset,
 		Data:        data,
 	}
 }
