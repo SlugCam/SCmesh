@@ -37,6 +37,12 @@ type Packet struct {
 	Payload   []byte // Encoded encrypted payload
 }
 
+type AbbreviatedPacket struct {
+	Preheader   Preheader
+	Header      *header.Header
+	PayloadSize int // Encoded encrypted payload
+}
+
 func NewPacket() *Packet {
 	p := new(Packet)
 	p.Header = new(header.Header)
@@ -44,6 +50,14 @@ func NewPacket() *Packet {
 }
 
 const SERIALIZED_PREHEADER_SIZE = 12
+
+func (p *Packet) Abbreviate() *AbbreviatedPacket {
+	return &AbbreviatedPacket{
+		Preheader:   p.Preheader,
+		Header:      p.Header,
+		PayloadSize: len(p.Payload),
+	}
+}
 
 // serializePreheader provides serialization of the packet preheader.
 func (p *Preheader) Serialize() []byte {

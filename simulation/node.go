@@ -152,7 +152,10 @@ func InterceptIncoming(config *pipeline.Config) chan packet.Packet {
 		splitter := make(chan packet.Packet)
 		go func() {
 			for c := range splitter {
-				ch <- c
+				select {
+				case ch <- c:
+				default:
+				}
 				out <- c
 			}
 		}()
