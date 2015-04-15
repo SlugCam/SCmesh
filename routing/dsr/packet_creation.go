@@ -115,7 +115,7 @@ func newRouteReply(addresses []uint32, orig uint32, target uint32) *packet.Packe
 	p.Header.Destination = proto.Uint32(orig)
 	p.Header.Source = proto.Uint32(target)
 	log.WithFields(log.Fields{
-		"packet": p,
+		"packet": p.Abbreviate(),
 	}).Info("Created route reply")
 
 	return p

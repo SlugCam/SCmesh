@@ -129,7 +129,8 @@ func (p *Packet) Pack(out chan<- []byte) {
 		out <- b
 
 		log.WithFields(log.Fields{
-			"data":      string(payloadSlice),
+			//"data":      string(payloadSlice),
+			"data-len":  len(payloadSlice),
 			"header":    p.Header,
 			"preheader": newPreheader,
 		}).Debug("Sending packet")

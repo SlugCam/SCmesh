@@ -192,7 +192,7 @@ func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<-
 			select {
 			case p := <-incomingPackets:
 				log.WithFields(log.Fields{
-					"packet": p,
+					"packet": p.Abbreviate(),
 				}).Info("Packet read by collector")
 				err := c.processPacket(p)
 				if err != nil {
