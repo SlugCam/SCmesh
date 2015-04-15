@@ -3,6 +3,7 @@ package dsr
 // TODO set required fields for packet including RECEIVER
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/SlugCam/SCmesh/util"
@@ -113,6 +114,9 @@ func newRouteReply(addresses []uint32, orig uint32, target uint32) *packet.Packe
 
 	p.Header.Destination = proto.Uint32(orig)
 	p.Header.Source = proto.Uint32(target)
+	log.WithFields(log.Fields{
+		"packet": p,
+	}).Info("Created route reply")
 
 	return p
 }

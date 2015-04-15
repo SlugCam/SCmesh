@@ -59,7 +59,7 @@ func (r *router) originate(o OriginationRequest) {
 		}
 		// Output packet
 		//r.out <- *packet
-		r.sendAlongSourceRoute(p)
+		r.sendAlongSourceRoute(packet)
 	}
 }
 
