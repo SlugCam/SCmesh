@@ -24,14 +24,14 @@ type receivedEntry struct {
 // originate at the local node, but do not include the local node. So the first
 // node listed in a route is the node to visit after the local node.
 type requestTable struct {
-	sentRequests     map[NodeID]sentEntry
+	sentRequests     map[NodeID]*sentEntry
 	receivedRequests map[NodeID]*list.List // Map initiator to list of requests received
 }
 
 // newRouteCache initialized an empty requestTable.
 func newRequestTable() *requestTable {
 	c := new(requestTable)
-	c.sentRequests = make(map[NodeID]sentEntry)
+	c.sentRequests = make(map[NodeID]*sentEntry)
 	c.receivedRequests = make(map[NodeID]*list.List)
 	return c
 }
@@ -47,7 +47,7 @@ func (c *requestTable) sentRequest(target NodeID) {
 		v.time = time.Now()
 	} else {
 		// new request issued
-		c.sentRequests[target] = sentEntry{
+		c.sentRequests[target] = &sentEntry{
 			time:  time.Now(),
 			count: 1,
 		}

@@ -49,7 +49,6 @@ func ListenIPC(r pipeline.Router, writeOut <-chan escrow.CollectedData, d *escro
 	}()
 }
 
-// TODO should only accept from localhost
 func listenClients(port string, ochan chan<- Command, ichan <-chan escrow.CollectedData) {
 	go func() {
 		os.Remove(port)
@@ -83,6 +82,7 @@ func handleConnection(c net.Conn, ochan chan<- Command, ichan <-chan escrow.Coll
 			err := enc.Encode(&d)
 			if err != nil {
 				log.Error("control connection error encoding message: ", err)
+				// TODO ERROR push message back and close connection
 			}
 		}
 	}()

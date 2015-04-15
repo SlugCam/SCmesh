@@ -6,11 +6,18 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/SlugCam/SCmesh/local/gateway"
 	"github.com/SlugCam/SCmesh/packet/header"
 	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/routing"
 )
+
+type OutboundMessage struct {
+	Id   int          `json:"id"`
+	Cam  string       `json:"cam"`
+	Time time.Time    `json:"time"`
+	Type string       `json:"type"`
+	Data *interface{} `json:"data"`
+}
 
 type PingOptions struct {
 	Destination uint32
@@ -28,7 +35,7 @@ func makePingPacket(localID uint32) (dh header.DataHeader, b []byte, err error) 
 		Destinations: []uint32{routing.BroadcastID},
 		Type:         header.DataHeader_MESSAGE.Enum(),
 	}
-	pingM := &gateway.OutboundMessage{
+	pingM := &OutboundMessage{
 		Id:   0,
 		Cam:  fmt.Sprintf("%d", localID),
 		Time: time.Now(),

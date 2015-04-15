@@ -38,14 +38,26 @@ func main() {
 
 	// Read incoming messages from connection
 	go func() {
-		b := make([]byte, 4096)
+		dec := json.NewDecoder(conn)
+
 		for {
-			n, err := conn.Read(b)
-			fmt.Println(b[:n])
+			var o interface{}
+			err := dec.Decode(&o)
 			if err != nil {
 				break
 			}
+			fmt.Println(o)
 		}
+		/*
+			b := make([]byte, 4096)
+			for {
+				n, err := conn.Read(b)
+				fmt.Println(b[:n])
+				if err != nil {
+					break
+				}
+			}
+		*/
 	}()
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -68,6 +80,8 @@ func main() {
 			ping(conn, true)
 		case "ping-dsr":
 			ping(conn, false)
+		case "ping":
+			escrowPing(conn)
 		case "send-video":
 			if len(args) >= 2 {
 				sendVideo(conn, args[1])

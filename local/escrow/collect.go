@@ -19,11 +19,13 @@ import (
 // CollectedData is what is provided when a file has finished transferring to
 // our node.
 type CollectedData struct {
+	Source    uint32
 	DataType  string    `json:"type"`
 	Timestamp time.Time `json:"timestamp"`
 	Path      string    `json:"path"`
 }
 type collectedMeta struct {
+	Source    uint32
 	DataType  string
 	Size      int64
 	Timestamp time.Time
@@ -83,6 +85,7 @@ func (c *Collector) processPacket(p packet.Packet) error {
 	if err != nil && os.IsNotExist(err) {
 		// Save meta
 		meta := collectedMeta{
+			Source:    *p.Header.Source,
 			DataType:  *dh.Type,
 			Size:      *dh.FileSize,
 			Timestamp: time.Unix(*dh.Timestamp, 0),
@@ -203,12 +206,19 @@ func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<-
 					log.Error("Error scanning collected file. ", err)
 				} else if finished {
 					// TODO, check if file exists
-					FileFromWire(path.Join(c.storePath, r), path.Join(c.outPath, r))
+					completedPath := path.Join(c.outPath, r)
+					FileFromWire(path.Join(c.storePath, r), completedPath)
+					meta, err := readMeta(path.Join(c.metaPath, r))
+					if err != nil {
+						log.Error("collector: error reading meta data")
+						continue
+					}
 					// TODO fix
 					out <- CollectedData{
-						DataType:  "TEST",
-						Path:      "TEST",
-						Timestamp: time.Now(),
+						DataType:  meta.DataType,
+						Path:      completedPath,
+						Timestamp: meta.Timestamp,
+						Source:    meta.Source,
 					}
 					// TODO delete old one
 				}
@@ -216,4 +226,16 @@ func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<-
 		}
 	}()
 	return
+}
+
+func readMeta(metaFilePath string) (collectedMeta, error) {
+	// Save meta
+	var meta collectedMeta
+	mfile, err := os.Open(metaFilePath)
+	if err != nil {
+		return meta, err
+	}
+	mdec := gob.NewDecoder(mfile)
+	err = mdec.Decode(&meta)
+	return meta, err
 }

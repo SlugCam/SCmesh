@@ -82,7 +82,7 @@ func (c *routeCache) getRoute(dest NodeID) []NodeID {
 		curRoute := curEntry.route
 		i := findNodeIndex(curRoute, dest)
 		if i > -1 {
-			newRoute := curRoute[:i+1]
+			newRoute := curRoute[:i]
 			if shortestPath == nil || len(newRoute) < len(shortestPath) {
 				shortestPath = newRoute
 			}

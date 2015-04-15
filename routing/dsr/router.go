@@ -58,7 +58,8 @@ func (r *router) originate(o OriginationRequest) {
 			log.Error("DSR originate:", err)
 		}
 		// Output packet
-		r.out <- *packet
+		//r.out <- *packet
+		r.sendAlongSourceRoute(p)
 	}
 }
 
@@ -84,7 +85,8 @@ func (r *router) originatePacket(p *packet.Packet) {
 			log.Error("DSR originate:", err)
 		}
 		// Output packet
-		r.out <- *p
+		//r.out <- *p
+		r.sendAlongSourceRoute(p)
 	}
 
 }
@@ -96,11 +98,13 @@ func (r *router) sendRouteRequest(target NodeID) {
 	r.requestTable.sentRequest(target)
 	r.out <- *newRouteRequest(r.localID, target)
 	// TODO set timeout
-
+	time.AfterFunc(500*time.Millisecond, func() {
+		r.processRouteRequestTimeout(target)
+	})
 }
 func (r *router) requestDiscovery(target NodeID) {
-	log.Info("reqdisc")
 	if !r.requestTable.discoveryInProcess(target) {
+		log.Info("reqdisc")
 		r.sendRouteRequest(target)
 	}
 }
@@ -145,9 +149,10 @@ func (r *router) forward(p packet.Packet) {
 }
 
 func (r *router) sendAlongSourceRoute(p *packet.Packet) {
+	log.Info("processRouteRequest: checking", p)
 	if processSourceRoute(p) {
-		r.addAckRequest(p)
 		log.Info("processRouteRequest: sending:", p)
+		r.addAckRequest(p)
 		r.out <- *p
 	}
 }
@@ -202,7 +207,6 @@ func (r *router) addAckRequest(p *packet.Packet) {
 // Returns true if we should forward, false if we do not forward
 func processSourceRoute(p *packet.Packet) bool {
 	// TODO more stuff
-	// decrement segments left
 	sr := p.Header.DsrHeader.SourceRoute
 	if sr == nil {
 		return false
@@ -253,7 +257,7 @@ func (r *router) processRouteReply(p *packet.Packet) {
 	if rr == nil || *p.Header.Destination != uint32(r.localID) {
 		return
 	}
-
+	r.requestTable.receivedReply(NodeID(*p.Header.Source))
 	// convert TODO remove when removing NodeID type
 	nroute := make([]NodeID, 0, len(rr.Addresses)+1)
 	for _, a := range rr.Addresses {

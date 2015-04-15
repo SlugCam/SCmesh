@@ -10,7 +10,7 @@ import (
 type NodeID uint32
 type Route []NodeID
 
-const BROADCAST_ID = NodeID(0xFFFF)
+const BROADCAST_ID = NodeID(0xFFFFFFFF)
 
 type linkMaint struct {
 	sentBeforeSetTimeout int

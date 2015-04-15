@@ -12,7 +12,7 @@ import (
 
 const DATA_PATH = "/var/SlugCam/SCmesh"
 
-func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
+func LocalProcessingTrackCollected(in <-chan packet.Packet, router pipeline.Router, collectedOut chan<- escrow.CollectedData) {
 	// TODO ensure that this can't block other processes
 	// TODO magic number
 	ipcOutChan := make(chan escrow.CollectedData, 500)
@@ -22,6 +22,17 @@ func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 	// hanging local processing of packets.
 	go func() {
 		for c := range collectedData {
+			log.WithFields(log.Fields{
+				"collected_data": c,
+			}).Info("finished collecting data")
+
+			if collectedOut != nil {
+				select {
+				case collectedOut <- c:
+				default:
+				}
+			}
+
 			select {
 			case ipcOutChan <- c:
 			default:
@@ -46,7 +57,7 @@ func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 	go func() {
 		for p := range in {
 			log.WithFields(log.Fields{
-				"packet": p,
+				"packet": p.Abbreviate(),
 			}).Info("Packet received locally:")
 
 			if p.Header == nil || p.Header.DataHeader == nil {
@@ -62,4 +73,8 @@ func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
 			}
 		}
 	}()
+}
+
+func LocalProcessing(in <-chan packet.Packet, router pipeline.Router) {
+	LocalProcessingTrackCollected(in, router, nil)
 }
