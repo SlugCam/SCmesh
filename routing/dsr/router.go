@@ -98,7 +98,7 @@ func (r *router) sendRouteRequest(target NodeID) {
 	r.requestTable.sentRequest(target)
 	r.out <- *newRouteRequest(r.localID, target)
 	// TODO set timeout
-	time.AfterFunc(500*time.Millisecond, func() {
+	time.AfterFunc(50*time.Millisecond, func() {
 		r.processRouteRequestTimeout(target)
 	})
 }
@@ -149,9 +149,7 @@ func (r *router) forward(p packet.Packet) {
 }
 
 func (r *router) sendAlongSourceRoute(p *packet.Packet) {
-	log.Info("processRouteRequest: checking", p)
 	if processSourceRoute(p) {
-		log.Info("processRouteRequest: sending:", p)
 		r.addAckRequest(p)
 		r.out <- *p
 	}

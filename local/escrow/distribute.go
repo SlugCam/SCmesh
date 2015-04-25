@@ -258,7 +258,7 @@ func (d *Distributor) sendRemaining(fileID int64) {
 			break
 		}
 		offset += n
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(DISTRIBUTE_RELEASE_REST)
 	}
 
 	// set timeout

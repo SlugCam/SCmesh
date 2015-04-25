@@ -52,7 +52,7 @@ func (g *Gateway) LocalProcessing(in <-chan packet.Packet, router pipeline.Route
 			if c.DataType == "message" {
 				messagePaths <- c.Path
 			} else if c.DataType == "video" {
-
+				go g.sendVideo(c)
 			}
 
 		}

@@ -144,7 +144,6 @@ func (p *Packet) Pack(out chan<- []byte) {
 func (raw *RawPacket) Parse() (pack Packet, err error) {
 	// Copy reference to payload
 	pack.Payload = raw.Payload
-	log.Debug("Parsing this raw packet:", raw)
 
 	// Decode preheader
 	decodedPreheader, err := util.Decode(raw.Preheader)
@@ -191,7 +190,9 @@ func ParsePackets(in <-chan RawPacket, out chan<- Packet) {
 				log.Error("Packet dropped during parsing.", err)
 			} else {
 				out <- p
-				log.Debug("Parsed:", p)
+				log.WithFields(log.Fields{
+					"packet": p.Abbreviate(),
+				}).Debug("Parsed")
 			}
 		}
 	}()

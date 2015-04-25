@@ -22,6 +22,7 @@ func main() {
 	debug := flag.Bool("debug", false, "print debug level log messages")
 	gwFlag := flag.Bool("gw", false, "run this server as a gateway")
 	messageServer := flag.String("ms", "localhost:7892", "address for the message server")
+	videoServer := flag.String("vs", "localhost:7893", "address for the video server")
 	serialDev := flag.String("serial", "/dev/ttyAMA0", "path of the serial device to use")
 	// TODO this is tacky
 	packetLog := flag.String("plog", "none", "path to log all packets to, or none for no logging")
@@ -78,7 +79,7 @@ func main() {
 	if *gwFlag {
 		gw := &gateway.Gateway{
 			MessageAddress: *messageServer,
-			VideoAddress:   "localhost",
+			VideoAddress:   *videoServer,
 		}
 		conf.LocalProcessing = gw.LocalProcessing
 	}

@@ -30,13 +30,15 @@ const (
 
 // For distribute
 const (
-	MAX_PAYLOAD_SIZE    = 512
+	//MAX_PAYLOAD_SIZE    = 512
+	MAX_PAYLOAD_SIZE    = 900
 	REQUEST_BUFFER_SIZE = 100
 	TIMEOUT_BUFFER_SIZE = 10
 )
 
 // TODO priorities for distribute
 const (
-	FIRST_TIMEOUT = 5 * time.Second // Time to wa
-	ACK_TIMEOUT   = 4 * time.Second
+	FIRST_TIMEOUT           = 3 * time.Second // Time to wa
+	ACK_TIMEOUT             = 2 * time.Second
+	DISTRIBUTE_RELEASE_REST = 0
 )
