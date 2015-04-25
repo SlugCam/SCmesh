@@ -91,6 +91,19 @@ save
 reboot
 ```
 
+### From the Raspberry Pi
+
+In Arch we must also use systemctl to disable getty. `sudo systemctl disable getty@tty1`.
+
+If using the serial connection setting:
+
+```
+init_uart_clock=6000000
+```
+
+has allowed the 230400 baud rate to be used. Though if using USB the default allowed baud rate might be higher.
+
+
 ## Protocol Buffers
 
 Uses https://github.com/golang/protobuf for protocol buffer support. There is a Makefile in the packet.header package for building the protocol buffer specification found in that same package. To build this you will also need the protocol buffer package (Arch: `sudo pacman -S protobuf`).
