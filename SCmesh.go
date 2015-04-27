@@ -19,6 +19,7 @@ func main() {
 
 	// Parse command flags
 	localID := flag.Int("id", 0, "the id number for this node, sinks are 0")
+	baudRate := flag.Int("baud", 115200, "the baud rate for the serial connection")
 	debug := flag.Bool("debug", false, "print debug level log messages")
 	gwFlag := flag.Bool("gw", false, "run this server as a gateway")
 	messageServer := flag.String("ms", "localhost:7892", "address for the message server")
@@ -36,7 +37,7 @@ func main() {
 	}
 
 	// Setup serial
-	c := &serial.Config{Name: *serialDev, Baud: 115200}
+	c := &serial.Config{Name: *serialDev, Baud: *baudRate}
 	serial, err := serial.OpenPort(c)
 	if err != nil {
 		log.Panic(err)
