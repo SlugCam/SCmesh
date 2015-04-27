@@ -15,10 +15,10 @@ func TestRouteCache(t *testing.T) {
 		dest NodeID
 		want []NodeID
 	}{
-		{NodeID(1), []NodeID{NodeID(1)}},
+		{NodeID(1), []NodeID{}},
 		{NodeID(9), nil},
-		{NodeID(5), []NodeID{NodeID(1), NodeID(5)}},
-		{NodeID(3), []NodeID{NodeID(1), NodeID(5), NodeID(3)}},
+		{NodeID(5), []NodeID{NodeID(1)}},
+		{NodeID(3), []NodeID{NodeID(1), NodeID(5)}},
 	}
 
 	for _, c := range cases {
