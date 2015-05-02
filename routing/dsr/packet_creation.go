@@ -95,19 +95,19 @@ func addSourceRoute(p *packet.Packet, route []NodeID) error {
 }
 
 // TODO rr id included? not shown in packet specs
-func newRouteReply(addresses []uint32, orig uint32, target uint32) *packet.Packet {
+func newRouteReply(addresses []*header.DSRHeader_Node, orig uint32, target uint32) *packet.Packet {
 	p := newDSRPacket()
 
 	reply := new(header.DSRHeader_RouteReply)
 	p.Header.DsrHeader.RouteReply = reply
 
-	reply.Addresses = make([]uint32, len(addresses))
+	reply.Addresses = make([]*header.DSRHeader_Node, len(addresses))
 	copy(reply.Addresses, addresses)
 
 	// find return route
 	returnRoute := make([]NodeID, len(addresses))
 	for i, a := range addresses {
-		returnRoute[len(addresses)-1-i] = NodeID(a)
+		returnRoute[len(addresses)-1-i] = NodeID(*a.Address)
 	}
 
 	addSourceRoute(p, returnRoute)

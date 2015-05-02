@@ -269,13 +269,37 @@ func (m *DSRHeader) GetSourceRoute() *DSRHeader_SourceRoute {
 	return nil
 }
 
+type DSRHeader_Node struct {
+	Address          *uint32 `protobuf:"varint,1,req,name=address" json:"address,omitempty"`
+	Cost             *uint32 `protobuf:"varint,2,req,name=cost" json:"cost,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *DSRHeader_Node) Reset()         { *m = DSRHeader_Node{} }
+func (m *DSRHeader_Node) String() string { return proto.CompactTextString(m) }
+func (*DSRHeader_Node) ProtoMessage()    {}
+
+func (m *DSRHeader_Node) GetAddress() uint32 {
+	if m != nil && m.Address != nil {
+		return *m.Address
+	}
+	return 0
+}
+
+func (m *DSRHeader_Node) GetCost() uint32 {
+	if m != nil && m.Cost != nil {
+		return *m.Cost
+	}
+	return 0
+}
+
 // If route request sent, receiver must be broadcast and source must be
 // originating node, TTL can be used
 type DSRHeader_RouteRequest struct {
-	Id               *uint32  `protobuf:"varint,1,req,name=id" json:"id,omitempty"`
-	Target           *uint32  `protobuf:"varint,2,req,name=target" json:"target,omitempty"`
-	Addresses        []uint32 `protobuf:"varint,3,rep,packed,name=addresses" json:"addresses,omitempty"`
-	XXX_unrecognized []byte   `json:"-"`
+	Id               *uint32           `protobuf:"varint,1,req,name=id" json:"id,omitempty"`
+	Target           *uint32           `protobuf:"varint,2,req,name=target" json:"target,omitempty"`
+	Addresses        []*DSRHeader_Node `protobuf:"bytes,3,rep,name=addresses" json:"addresses,omitempty"`
+	XXX_unrecognized []byte            `json:"-"`
 }
 
 func (m *DSRHeader_RouteRequest) Reset()         { *m = DSRHeader_RouteRequest{} }
@@ -296,7 +320,7 @@ func (m *DSRHeader_RouteRequest) GetTarget() uint32 {
 	return 0
 }
 
-func (m *DSRHeader_RouteRequest) GetAddresses() []uint32 {
+func (m *DSRHeader_RouteRequest) GetAddresses() []*DSRHeader_Node {
 	if m != nil {
 		return m.Addresses
 	}
@@ -306,15 +330,15 @@ func (m *DSRHeader_RouteRequest) GetAddresses() []uint32 {
 // Source will be set to the node originating the reply
 // Destination will be the node who originated the request
 type DSRHeader_RouteReply struct {
-	Addresses        []uint32 `protobuf:"varint,1,rep,packed,name=addresses" json:"addresses,omitempty"`
-	XXX_unrecognized []byte   `json:"-"`
+	Addresses        []*DSRHeader_Node `protobuf:"bytes,1,rep,name=addresses" json:"addresses,omitempty"`
+	XXX_unrecognized []byte            `json:"-"`
 }
 
 func (m *DSRHeader_RouteReply) Reset()         { *m = DSRHeader_RouteReply{} }
 func (m *DSRHeader_RouteReply) String() string { return proto.CompactTextString(m) }
 func (*DSRHeader_RouteReply) ProtoMessage()    {}
 
-func (m *DSRHeader_RouteReply) GetAddresses() []uint32 {
+func (m *DSRHeader_RouteReply) GetAddresses() []*DSRHeader_Node {
 	if m != nil {
 		return m.Addresses
 	}

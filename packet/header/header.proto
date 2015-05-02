@@ -36,19 +36,25 @@ message DataHeader {
 }
 
 message DSRHeader {
+
+    message Node {
+        required uint32 address = 1;
+        required uint32 cost = 2;
+    }
+
     // If route request sent, receiver must be broadcast and source must be
     // originating node, TTL can be used
     message RouteRequest {
-        required uint32 id = 1; // Unique for sourse and destination
+        required uint32 id = 1; // Unique for source and destination
         required uint32 target = 2;
-        repeated uint32 addresses = 3 [packed=true]; // ordered from initiator not including initiator
+        repeated Node addresses = 3; // ordered from initiator not including initiator
     }
     optional RouteRequest route_request = 1;
 
     // Source will be set to the node originating the reply
     // Destination will be the node who originated the request
     message RouteReply {
-        repeated uint32 addresses = 1 [packed=true]; // ordered from initiator not including initiator
+        repeated Node addresses = 1; // ordered from initiator not including initiator
     }
     optional RouteReply route_reply = 2;
 

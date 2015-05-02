@@ -87,6 +87,7 @@ set ip local 8080
 set comm match 4
 set comm size 1524 #?
 set comm time 0
+set adhoc probe 255
 save
 reboot
 ```
@@ -116,3 +117,4 @@ go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
 ```
 
 The proto package will be pulled in as an SCmesh dependency.
+

@@ -256,22 +256,18 @@ func (r *router) processRouteReply(p *packet.Packet) {
 		return
 	}
 	r.requestTable.receivedReply(NodeID(*p.Header.Source))
-	// convert TODO remove when removing NodeID type
+	r.routeCache.addRoute(rr.Addresses, *p.Header.Source)
+	// Check send buffer
 	nroute := make([]NodeID, 0, len(rr.Addresses)+1)
-	for _, a := range rr.Addresses {
-		nroute = append(nroute, NodeID(a))
+	for _, n := range rr.Addresses {
+		nroute = append(nroute, NodeID(*n.Address))
 	}
 	nroute = append(nroute, NodeID(*p.Header.Source))
-	r.routeCache.addRoute(nroute, 0)
-
-	// Check send buffer
 	sendable := r.sendBuffer.getSendable(nroute)
 	for _, op := range sendable {
-
 		// Output packet
 		r.sendAlongSourceRoute(op)
 	}
-
 }
 
 // processRouteRequest is specified by section 8.2.2.
@@ -296,7 +292,7 @@ func (r *router) processRouteRequest(p *packet.Packet) bool {
 		return false
 	}
 	for _, a := range rr.Addresses {
-		if a == uint32(r.localID) {
+		if *a.Address == uint32(r.localID) {
 			log.Error("loop found in route request")
 			return false
 		}
@@ -314,7 +310,10 @@ func (r *router) processRouteRequest(p *packet.Packet) bool {
 	// Make copy of route request option
 	nr := *rr
 	p.Header.DsrHeader.RouteRequest = &nr
-	nr.Addresses = append(nr.Addresses, uint32(r.localID))
+	nr.Addresses = append(nr.Addresses, &header.DSRHeader_Node{
+		Address: proto.Uint32(uint32(r.localID)),
+		Cost:    proto.Uint32(localCost()),
+	})
 
 	// TODO Check if we can perform a cached route reply
 
@@ -323,6 +322,11 @@ func (r *router) processRouteRequest(p *packet.Packet) bool {
 	r.out <- *p
 	return false
 
+}
+
+// TODO
+func localCost() uint32 {
+	return uint32(0)
 }
 
 func (r *router) processAck(p *packet.Packet) {
