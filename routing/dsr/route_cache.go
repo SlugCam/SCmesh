@@ -1,6 +1,8 @@
 package dsr
 
-// TODO we should be able to maintain cache size so it does not grow to large.
+// TODO we should be able to maintain cache size so it does not grow to
+// large.
+
 // TODO don't add duplicates, instead update timeout
 
 import (
@@ -9,10 +11,11 @@ import (
 	"github.com/SlugCam/SCmesh/packet/header"
 )
 
-// This file contains code implementing a path cache for DSR as described in
-// section 4.1 of RFC4728. For simplicity we are implementing a path cache
-// first, and later this could be swapped for a link cache if desired. In
-// particular, the Link Max-Life route cache is recommended.
+// This file contains code implementing a path cache for DSR as
+// described in section 4.1 of RFC4728. For simplicity we are
+// implementing a path cache first, and later this could be swapped for
+// a link cache if desired. In particular, the Link Max-Life route cache
+// is recommended.
 
 type cachedNode struct {
 	address uint32
@@ -20,13 +23,14 @@ type cachedNode struct {
 }
 
 type route struct {
-	nodes []cachedNode
+	nodes []uint32
 	cost  int
 }
 
 // A routeCache contains a collection of cached routes. These routes all
-// originate at the local node, but do not include the local node. So the first
-// node listed in a route is the node to visit after the local node.
+// originate at the local node, but do not include the local node. So
+// the first node listed in a route is the node to visit after the local
+// node.
 type routeCache struct {
 	l *list.List // holds []cachedNode
 }
@@ -58,14 +62,13 @@ func (c *routeCache) addRoute(route []*header.DSRHeader_Node, target uint32) {
 
 func (c *routeCache) removeLink(a, b uint32) {
 	for e := c.l.Front(); e != nil; e = e.Next() {
-		curEntry := e.Value.(cacheEntry)
-		curRoute := curEntry.route
+		curCached := e.Value.([]cachedNode)
 		lastWasA := false
-		for _, id := range curRoute {
-			if id == NodeID(a) {
+		for _, n := range curCached {
+			if n.address == a {
 				lastWasA = true
 			} else {
-				if id == NodeID(b) && lastWasA {
+				if n.address == b && lastWasA {
 					c.l.Remove(e)
 					break
 				}
@@ -75,12 +78,10 @@ func (c *routeCache) removeLink(a, b uint32) {
 	}
 }
 
-func (c *routeCache) removeNeighbor(neighbor NodeID) {
-
+func (c *routeCache) removeNeighbor(neighbor uint32) {
 	for e := c.l.Front(); e != nil; e = e.Next() {
-		curEntry := e.Value.(cacheEntry)
-		curRoute := curEntry.route
-		if len(curRoute) > 0 && curRoute[0] == neighbor {
+		curCached := e.Value.([]cachedNode)
+		if len(curCached) > 0 && curCached[0].address == neighbor {
 			c.l.Remove(e)
 		}
 	}
@@ -94,12 +95,12 @@ func (c *routeCache) removeNeighbor(neighbor NodeID) {
 // TODO should return lowest cost path
 func (c *routeCache) getRoute(dest uint32) []uint32 {
 
-	var routes []route
+	var routes []*route
 
 	// Find all valid routes
 	for e := c.l.Front(); e != nil; e = e.Next() {
 		curCached := e.Value.([]cachedNode)
-		curRoute := findNodeIndex(curCached, dest)
+		curRoute := findInnerRoute(curCached, dest)
 		if curRoute != nil {
 			routes = append(routes, curRoute)
 		}
@@ -116,15 +117,17 @@ func (c *routeCache) getRoute(dest uint32) []uint32 {
 // findNodeIndex finds d (destination) in r (route). If it is found, it returns
 // a route (excluding destination), otherwise it returns nil.
 func findInnerRoute(r []cachedNode, d uint32) *route {
+	addresses := make([]uint32, 0)
 	cost := 0
-	for i, v := range r {
+	for _, v := range r {
 		if v.address == d {
 			return &route{
-				nodes: r[:i],
+				nodes: addresses,
 				cost:  cost,
 			}
 		}
-		cost += v.cost
+		addresses = append(addresses, v.address)
+		cost += int(v.cost)
 	}
 	return nil
 }

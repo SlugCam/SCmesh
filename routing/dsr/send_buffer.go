@@ -24,7 +24,7 @@ func (b *sendBuffer) addPacket(p *packet.Packet) {
 }
 
 // getSendable returns slice of packets now sendable with source route options added.
-func (b *sendBuffer) getSendable(route []NodeID) []*packet.Packet {
+func (b *sendBuffer) getSendable(route []uint32) []*packet.Packet {
 	log.Info("getSendable route:", route)
 
 	var sendable []*packet.Packet
@@ -36,7 +36,7 @@ func (b *sendBuffer) getSendable(route []NodeID) []*packet.Packet {
 			b.l.Remove(e)
 			continue
 		}
-		i := findNodeIndex(route, NodeID(*p.Header.Destination))
+		i := findNodeIndex(route, *p.Header.Destination)
 		// Add source route and remove from list if route found
 		if i > -1 {
 			b.l.Remove(e)
@@ -49,4 +49,15 @@ func (b *sendBuffer) getSendable(route []NodeID) []*packet.Packet {
 		}
 	}
 	return sendable
+}
+
+// findNodeIndex finds d (destination) in r (route). If it is found, it
+// returns the index of the destination, otherwise it returns -1.
+func findNodeIndex(r []uint32, d uint32) int {
+	for i, v := range r {
+		if v == d {
+			return i
+		}
+	}
+	return -1
 }

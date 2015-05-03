@@ -10,7 +10,7 @@ import (
 type NodeID uint32
 type Route []NodeID
 
-const BROADCAST_ID = NodeID(0xFFFFFFFF)
+const BROADCAST_ID = 0xFFFFFFFF
 
 type linkMaint struct {
 	sentBeforeSetTimeout int
@@ -21,7 +21,7 @@ type linkMaint struct {
 // originate. They are used in RoutePackets to provide communication to this
 // module from outside.
 type OriginationRequest struct {
-	Destination NodeID
+	Destination uint32
 	Offset      int64
 	DataHeader  header.DataHeader
 	Data        []byte
@@ -31,7 +31,7 @@ type OriginationRequest struct {
 // manages packet origination and forwarding.
 func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-chan OriginationRequest, out chan<- packet.Packet) {
 
-	r := newRouter(NodeID(localID), out)
+	r := newRouter(localID, out)
 
 	go func() {
 		for {

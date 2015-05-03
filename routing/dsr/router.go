@@ -15,14 +15,14 @@ const ERROR_REPORTING_TIMEOUT = 2 * time.Second
 // These data structures could be optimized
 type router struct {
 	liveLinks    map[uint32]linkMaint
-	localID      NodeID
+	localID      uint32
 	routeCache   *routeCache
 	sendBuffer   *sendBuffer
 	requestTable *requestTable
 	out          chan<- packet.Packet
 }
 
-func newRouter(localID NodeID, out chan<- packet.Packet) *router {
+func newRouter(localID uint32, out chan<- packet.Packet) *router {
 	r := new(router)
 	r.localID = localID
 	r.routeCache = newRouteCache()
@@ -72,12 +72,12 @@ func (r *router) originatePacket(p *packet.Packet) {
 	dest := *p.Header.Destination
 	p.Header.Source = proto.Uint32(uint32(r.localID))
 	// Check route cache for destination in packet header
-	route := r.routeCache.getRoute(NodeID(dest))
+	route := r.routeCache.getRoute(dest)
 	if route == nil {
 		// If no route found perform route discovery
 		r.sendBuffer.addPacket(p)
 		// TODO initiateRouteDiscovery
-		r.requestDiscovery(NodeID(dest))
+		r.requestDiscovery(dest)
 	} else {
 		// Otherwise add source route option to packet
 		err := addSourceRoute(p, route)
@@ -93,7 +93,7 @@ func (r *router) originatePacket(p *packet.Packet) {
 
 // DISCOVERY FUNCTIONS
 
-func (r *router) sendRouteRequest(target NodeID) {
+func (r *router) sendRouteRequest(target uint32) {
 	log.Info("sendRR")
 	r.requestTable.sentRequest(target)
 	r.out <- *newRouteRequest(r.localID, target)
@@ -102,13 +102,13 @@ func (r *router) sendRouteRequest(target NodeID) {
 		r.processRouteRequestTimeout(target)
 	})
 }
-func (r *router) requestDiscovery(target NodeID) {
+func (r *router) requestDiscovery(target uint32) {
 	if !r.requestTable.discoveryInProcess(target) {
 		log.Info("reqdisc")
 		r.sendRouteRequest(target)
 	}
 }
-func (r *router) processRouteRequestTimeout(target NodeID) {
+func (r *router) processRouteRequestTimeout(target uint32) {
 	if r.requestTable.discoveryInProcess(target) {
 		r.sendRouteRequest(target)
 	}
@@ -178,7 +178,7 @@ func (r *router) addAckRequest(p *packet.Packet) {
 			if ll.timeout != nil {
 				if time.Now().After(*ll.timeout) {
 					// TODO send route error
-					r.routeCache.removeNeighbor(NodeID(p.Preheader.Receiver))
+					r.routeCache.removeNeighbor(p.Preheader.Receiver)
 					if p.Header.Destination != nil {
 						r.originatePacket(newErrorPacket(uint32(r.localID), *p.Header.Destination, &header.DSRHeader_NodeUnreachableError{
 							Salvage:                proto.Uint32(uint32(0)),
@@ -255,14 +255,15 @@ func (r *router) processRouteReply(p *packet.Packet) {
 	if rr == nil || *p.Header.Destination != uint32(r.localID) {
 		return
 	}
-	r.requestTable.receivedReply(NodeID(*p.Header.Source))
+	r.requestTable.receivedReply(*p.Header.Source)
 	r.routeCache.addRoute(rr.Addresses, *p.Header.Source)
 	// Check send buffer
-	nroute := make([]NodeID, 0, len(rr.Addresses)+1)
+	nroute := make([]uint32, 0, len(rr.Addresses)+1)
 	for _, n := range rr.Addresses {
-		nroute = append(nroute, NodeID(*n.Address))
+		nroute = append(nroute, *n.Address)
 	}
-	nroute = append(nroute, NodeID(*p.Header.Source))
+	nroute = append(nroute, *p.Header.Source)
+
 	sendable := r.sendBuffer.getSendable(nroute)
 	for _, op := range sendable {
 		// Output packet
@@ -299,14 +300,14 @@ func (r *router) processRouteRequest(p *packet.Packet) bool {
 	}
 
 	// Check for route request entry to see if we have seen this route request
-	if r.requestTable.hasReceivedRequest(NodeID(*p.Header.Source), NodeID(*rr.Target), *rr.Id) {
+	if r.requestTable.hasReceivedRequest(*p.Header.Source, *rr.Target, *rr.Id) {
 		return false // route request already seen
 	}
 
 	// At this point continue processing
 
 	// Add request to cache
-	r.requestTable.receivedRequest(NodeID(*p.Header.Source), NodeID(*rr.Target), *rr.Id)
+	r.requestTable.receivedRequest(*p.Header.Source, *rr.Target, *rr.Id)
 	// Make copy of route request option
 	nr := *rr
 	p.Header.DsrHeader.RouteRequest = &nr
@@ -376,6 +377,6 @@ func (r *router) processAckRequest(p *packet.Packet) {
 		return
 	}
 
-	r.out <- *newAckPacket(r.localID, NodeID(*ar.Source), *ar.Identification)
+	r.out <- *newAckPacket(r.localID, *ar.Source, *ar.Identification)
 
 }

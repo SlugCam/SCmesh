@@ -24,21 +24,21 @@ type receivedEntry struct {
 // originate at the local node, but do not include the local node. So the first
 // node listed in a route is the node to visit after the local node.
 type requestTable struct {
-	sentRequests     map[NodeID]*sentEntry
-	receivedRequests map[NodeID]*list.List // Map initiator to list of requests received
+	sentRequests     map[uint32]*sentEntry
+	receivedRequests map[uint32]*list.List // Map initiator to list of requests received
 }
 
 // newRouteCache initialized an empty requestTable.
 func newRequestTable() *requestTable {
 	c := new(requestTable)
-	c.sentRequests = make(map[NodeID]*sentEntry)
-	c.receivedRequests = make(map[NodeID]*list.List)
+	c.sentRequests = make(map[uint32]*sentEntry)
+	c.receivedRequests = make(map[uint32]*list.List)
 	return c
 }
 
 // FUNCTIONS FOR OUTGOING REQUESTS
 
-func (c *requestTable) sentRequest(target NodeID) {
+func (c *requestTable) sentRequest(target uint32) {
 	// TODO what about 0 values
 	v, ok := c.sentRequests[target]
 	if ok {
@@ -57,7 +57,7 @@ func (c *requestTable) sentRequest(target NodeID) {
 // receivedReply updates the request table to bring the count of requests sent
 // for a target to 0. Should be called whenever a reply is found. If no entry
 // exists in the request table nothing happens.
-func (c *requestTable) receivedReply(target NodeID) {
+func (c *requestTable) receivedReply(target uint32) {
 	// TODO what about 0 values
 	v, ok := c.sentRequests[target]
 	if ok {
@@ -68,7 +68,7 @@ func (c *requestTable) receivedReply(target NodeID) {
 // hasReceivedReply returns true if a reply has been received since our last
 // request was sent. Used to see if we should resend a route request when a
 // timeout occurs.
-func (c *requestTable) discoveryInProcess(target NodeID) bool {
+func (c *requestTable) discoveryInProcess(target uint32) bool {
 	v, ok := c.sentRequests[target]
 	if ok {
 		return v.count > 0
@@ -80,15 +80,15 @@ func (c *requestTable) discoveryInProcess(target NodeID) bool {
 // FUNCTIONS INCOMING REQUESTS
 
 // TODO should check size and drop oldest entry
-func (c *requestTable) hasReceivedRequest(initiator NodeID, target NodeID, id uint32) bool {
+func (c *requestTable) hasReceivedRequest(initiator uint32, target uint32, id uint32) bool {
 	v := c.receivedRequests[initiator]
 	if v == nil {
 		return false
 	}
 
 	testValue := struct {
-		NodeID
-		uint32
+		t uint32
+		i uint32
 	}{target, id}
 
 	for e := v.Front(); e != nil; e = e.Next() {
@@ -100,7 +100,7 @@ func (c *requestTable) hasReceivedRequest(initiator NodeID, target NodeID, id ui
 	return false
 }
 
-func (c *requestTable) receivedRequest(initiator NodeID, target NodeID, id uint32) {
+func (c *requestTable) receivedRequest(initiator uint32, target uint32, id uint32) {
 
 	v, ok := c.receivedRequests[initiator]
 	if !ok {
@@ -109,8 +109,8 @@ func (c *requestTable) receivedRequest(initiator NodeID, target NodeID, id uint3
 		c.receivedRequests[initiator] = v
 	}
 	v.PushBack(struct {
-		NodeID
-		uint32
+		t uint32
+		i uint32
 	}{target, id})
 
 }

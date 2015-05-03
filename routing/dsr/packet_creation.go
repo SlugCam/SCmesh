@@ -17,16 +17,16 @@ func newDSRPacket() *packet.Packet {
 	return p
 }
 
-func newRouteRequest(source NodeID, dest NodeID) *packet.Packet {
+func newRouteRequest(source uint32, dest uint32) *packet.Packet {
 	p := newDSRPacket()
-	p.Header.Source = proto.Uint32(uint32(source))
+	p.Header.Source = proto.Uint32(source)
 	p.Preheader.Receiver = uint32(BROADCAST_ID)
 
 	rr := new(header.DSRHeader_RouteRequest)
 	p.Header.DsrHeader.RouteRequest = rr
 	// TODO Set up route request
 	rr.Id = proto.Uint32(util.RandomUint32()) // TODO not random
-	rr.Target = proto.Uint32(uint32(dest))
+	rr.Target = proto.Uint32(dest)
 	//Addresses
 	return p
 }
@@ -42,17 +42,17 @@ func newErrorPacket(source, dest uint32, errHeader *header.DSRHeader_NodeUnreach
 
 }
 
-func newAckPacket(source NodeID, dest NodeID, id uint32) *packet.Packet {
+func newAckPacket(source uint32, dest uint32, id uint32) *packet.Packet {
 	p := newDSRPacket()
-	p.Header.Source = proto.Uint32(uint32(source))
-	p.Preheader.Receiver = uint32(dest)
+	p.Header.Source = proto.Uint32(source)
+	p.Preheader.Receiver = dest
 
 	ah := new(header.DSRHeader_Ack)
 	p.Header.DsrHeader.Ack = ah
 
 	ah.Identification = proto.Uint32(id) // TODO not random
-	ah.Source = proto.Uint32(uint32(source))
-	ah.Destination = proto.Uint32(uint32(dest))
+	ah.Source = proto.Uint32(source)
+	ah.Destination = proto.Uint32(dest)
 
 	return p
 }
@@ -69,7 +69,7 @@ func newOriginationPacket(o OriginationRequest) *packet.Packet {
 // packet already has a source route this function will silently replace it. If
 // the packet does not have a header or DSR header we add them. This process is
 // outlines in RFC4728 sec. 8.1.3.
-func addSourceRoute(p *packet.Packet, route []NodeID) error {
+func addSourceRoute(p *packet.Packet, route []uint32) error {
 	// Ensure that the proper headers exist
 	if p.Header == nil {
 		p.Header = new(header.Header)
@@ -78,17 +78,11 @@ func addSourceRoute(p *packet.Packet, route []NodeID) error {
 		p.Header.DsrHeader = new(header.DSRHeader)
 	}
 
-	// Convert the route
-	addresses := make([]uint32, 0, len(route))
-	for _, v := range route {
-		addresses = append(addresses, uint32(v))
-	}
-
 	// Add source route option
 	p.Header.DsrHeader.SourceRoute = &header.DSRHeader_SourceRoute{
 		Salvage:   proto.Uint32(0),
 		SegsLeft:  proto.Uint32(uint32(len(route))),
-		Addresses: addresses,
+		Addresses: route,
 	}
 
 	return nil
@@ -105,9 +99,9 @@ func newRouteReply(addresses []*header.DSRHeader_Node, orig uint32, target uint3
 	copy(reply.Addresses, addresses)
 
 	// find return route
-	returnRoute := make([]NodeID, len(addresses))
+	returnRoute := make([]uint32, len(addresses))
 	for i, a := range addresses {
-		returnRoute[len(addresses)-1-i] = NodeID(*a.Address)
+		returnRoute[len(addresses)-1-i] = *a.Address
 	}
 
 	addSourceRoute(p, returnRoute)
