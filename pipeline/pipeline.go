@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"io"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet"
@@ -17,14 +18,15 @@ type Router interface {
 }
 
 type Config struct {
-	LocalID         uint32
-	Serial          io.ReadWriter
-	Prefilter       func(in io.Reader, out chan<- packet.RawPacket)
-	ParsePackets    func(in <-chan packet.RawPacket, out chan<- packet.Packet)
-	RoutePackets    func(localID uint32, toForward <-chan packet.Packet, destLocal chan<- packet.Packet, out chan<- packet.Packet) Router
-	LocalProcessing func(destLocal <-chan packet.Packet, router Router)
-	PackPackets     func(in <-chan packet.Packet, out chan<- []byte)
-	WritePackets    func(in <-chan []byte, out io.Writer)
+	LocalID            uint32
+	Serial             io.ReadWriter
+	WiFlyResetInterval time.Duration
+	Prefilter          func(in io.Reader, out chan<- packet.RawPacket)
+	ParsePackets       func(in <-chan packet.RawPacket, out chan<- packet.Packet)
+	RoutePackets       func(localID uint32, toForward <-chan packet.Packet, destLocal chan<- packet.Packet, out chan<- packet.Packet) Router
+	LocalProcessing    func(destLocal <-chan packet.Packet, router Router)
+	PackPackets        func(in <-chan packet.Packet, out chan<- []byte)
+	WritePackets       func(in <-chan []byte, out io.Writer, WiFlyResetInterval time.Duration)
 }
 
 func Start(c Config) {
@@ -48,5 +50,5 @@ func Start(c Config) {
 
 	c.PackPackets(fromRouter, packedPackets)
 
-	c.WritePackets(packedPackets, c.Serial)
+	c.WritePackets(packedPackets, c.Serial, c.WiFlyResetInterval)
 }

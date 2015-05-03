@@ -3,9 +3,12 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"net/http"
 	"os"
 
 	"sync"
+
+	_ "net/http/pprof"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/config"
@@ -16,6 +19,9 @@ import (
 )
 
 func main() {
+	go func() {
+		log.Info(http.ListenAndServe(":6060", nil))
+	}()
 
 	// Parse command flags
 	localID := flag.Int("id", 0, "the id number for this node, sinks are 0")

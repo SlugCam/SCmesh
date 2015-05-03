@@ -34,7 +34,7 @@ func (r *Router) LocalID() uint32 {
 func (r *Router) OriginateDSR(dest uint32, offset int64, dataHeader header.DataHeader, data []byte) {
 	log.Debug("OriginateDSR called")
 	r.originateDSR <- dsr.OriginationRequest{
-		Destination: dsr.NodeID(dest),
+		Destination: dest,
 		DataHeader:  dataHeader,
 		Offset:      offset,
 		Data:        data,
