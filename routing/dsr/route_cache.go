@@ -19,8 +19,8 @@ type cachedNode struct {
 	cost    uint32
 }
 
-type cacheEntry struct {
-	route []NodeID
+type route struct {
+	nodes []cachedNode
 	cost  int
 }
 
@@ -94,30 +94,37 @@ func (c *routeCache) removeNeighbor(neighbor NodeID) {
 // TODO should return lowest cost path
 func (c *routeCache) getRoute(dest uint32) []uint32 {
 
-	var shortestPath []NodeID
+	var routes []route
 
+	// Find all valid routes
 	for e := c.l.Front(); e != nil; e = e.Next() {
-		curEntry := e.Value.(cacheEntry)
-		curRoute := curEntry.route
-		i := findNodeIndex(curRoute, dest)
-		if i > -1 {
-			newRoute := curRoute[:i]
-			if shortestPath == nil || len(newRoute) < len(shortestPath) {
-				shortestPath = newRoute
-			}
+		curCached := e.Value.([]cachedNode)
+		curRoute := findNodeIndex(curCached, dest)
+		if curRoute != nil {
+			routes = append(routes, curRoute)
 		}
 	}
 
-	return shortestPath
+	// Choose a route
+	if len(routes) > 0 {
+		return routes[0].nodes
+	} else {
+		return nil
+	}
 }
 
 // findNodeIndex finds d (destination) in r (route). If it is found, it returns
-// the index of the destination, otherwise it returns -1.
-func findNodeIndex(r []cachedNode, d uint32) int {
+// a route (excluding destination), otherwise it returns nil.
+func findInnerRoute(r []cachedNode, d uint32) *route {
+	cost := 0
 	for i, v := range r {
 		if v.address == d {
-			return i
+			return &route{
+				nodes: r[:i],
+				cost:  cost,
+			}
 		}
+		cost += v.cost
 	}
-	return -1
+	return nil
 }
