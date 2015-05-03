@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -38,6 +39,7 @@ type Packet struct {
 }
 
 type AbbreviatedPacket struct {
+	Timestamp   time.Time
 	Preheader   Preheader
 	Header      *header.Header
 	PayloadSize int // Encoded encrypted payload
@@ -53,6 +55,7 @@ const SERIALIZED_PREHEADER_SIZE = 12
 
 func (p *Packet) Abbreviate() *AbbreviatedPacket {
 	return &AbbreviatedPacket{
+		Timestamp:   time.Now(),
 		Preheader:   p.Preheader,
 		Header:      p.Header,
 		PayloadSize: len(p.Payload),
