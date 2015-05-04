@@ -9,7 +9,7 @@ import (
 	"github.com/SlugCam/SCmesh/packet/header"
 )
 
-const BUFFER_SIZE = 1000
+const BUFFER_SIZE = 9999
 
 type Router interface {
 	LocalID() uint32
@@ -29,6 +29,43 @@ type Config struct {
 	WritePackets       func(in <-chan []byte, out io.Writer, WiFlyResetInterval time.Duration)
 }
 
+func dr(out chan<- packet.RawPacket) chan<- packet.RawPacket {
+	in := make(chan packet.RawPacket)
+	go func() {
+		for v := range in {
+			select {
+			case out <- v:
+			default:
+			}
+		}
+	}()
+	return in
+}
+func dp(out chan<- packet.Packet) chan<- packet.Packet {
+	in := make(chan packet.Packet)
+	go func() {
+		for v := range in {
+			select {
+			case out <- v:
+			default:
+			}
+		}
+	}()
+	return in
+}
+func db(out chan<- []byte) chan<- []byte {
+	in := make(chan []byte)
+	go func() {
+		for v := range in {
+			select {
+			case out <- v:
+			default:
+			}
+		}
+	}()
+	return in
+}
+
 func Start(c Config) {
 	log.Info("Starting SCmesh")
 
@@ -40,7 +77,7 @@ func Start(c Config) {
 	packedPackets := make(chan []byte, BUFFER_SIZE)
 
 	// Setup pipeline
-	c.Prefilter(c.Serial, rawPackets)
+	c.Prefilter(c.Serial, dr(rawPackets))
 
 	c.ParsePackets(rawPackets, toRouter)
 
@@ -48,7 +85,7 @@ func Start(c Config) {
 
 	c.LocalProcessing(destLocal, r)
 
-	c.PackPackets(fromRouter, packedPackets)
+	c.PackPackets(fromRouter, db(packedPackets))
 
 	c.WritePackets(packedPackets, c.Serial, c.WiFlyResetInterval)
 }

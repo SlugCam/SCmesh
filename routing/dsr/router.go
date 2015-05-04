@@ -98,7 +98,7 @@ func (r *router) sendRouteRequest(target uint32) {
 	r.requestTable.sentRequest(target)
 	r.out <- *newRouteRequest(r.localID, target)
 	// TODO set timeout
-	time.AfterFunc(50*time.Millisecond, func() {
+	time.AfterFunc(250*time.Millisecond, func() {
 		r.processRouteRequestTimeout(target)
 	})
 }

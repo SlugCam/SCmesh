@@ -32,7 +32,7 @@ func WritePackets(in <-chan []byte, out io.Writer, resetTime time.Duration) {
 			for {
 				select {
 				case c := <-in:
-					log.Info("sending packet")
+					log.Info("writing packet")
 					out.Write(c)
 				case <-t.C:
 					log.Info("reseting WiFly")
