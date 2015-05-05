@@ -11,6 +11,8 @@ type NodeID uint32
 type Route []NodeID
 
 const BROADCAST_ID = 0xFFFFFFFF
+const LINK_RESEND_TIMEOUT = 3 * time.Second
+const LINK_RESEND_JITTER = 1 * time.Second
 
 type linkMaint struct {
 	sentBeforeSetTimeout int
@@ -40,6 +42,8 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-
 				r.forward(p)
 			case o := <-toOriginate:
 				r.originate(o)
+			case ackIDToCheck := <-r.resendTimeout:
+				r.resendPacket(ackIDToCheck)
 			}
 
 		}

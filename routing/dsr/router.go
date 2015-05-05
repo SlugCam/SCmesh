@@ -1,6 +1,7 @@
 package dsr
 
 import (
+	"math/rand"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -14,16 +15,20 @@ const ERROR_REPORTING_TIMEOUT = 2 * time.Second
 
 // These data structures could be optimized
 type router struct {
-	liveLinks    map[uint32]linkMaint
-	localID      uint32
-	routeCache   *routeCache
-	sendBuffer   *sendBuffer
-	requestTable *requestTable
-	out          chan<- packet.Packet
+	sentPackets   map[uint32]*packet.Packet // map from ack id to packet
+	resendTimeout chan uint32
+	liveLinks     map[uint32]linkMaint
+	localID       uint32
+	routeCache    *routeCache
+	sendBuffer    *sendBuffer
+	requestTable  *requestTable
+	out           chan<- packet.Packet
 }
 
 func newRouter(localID uint32, out chan<- packet.Packet) *router {
 	r := new(router)
+	r.sentPackets = make(map[uint32]*packet.Packet)
+	r.resendTimeout = make(chan uint32)
 	r.localID = localID
 	r.routeCache = newRouteCache()
 	r.sendBuffer = newSendBuffer()
@@ -161,6 +166,8 @@ func (r *router) addAckRequest(p *packet.Packet) {
 		Identification: proto.Uint32(id),
 		Source:         proto.Uint32(uint32(r.localID)),
 	}
+
+	// Detect broken links
 	// Make entry tracking acks outstanding
 	ll, ok := r.liveLinks[p.Preheader.Receiver]
 	if ok {
@@ -197,6 +204,26 @@ func (r *router) addAckRequest(p *packet.Packet) {
 		}
 
 		r.liveLinks[p.Preheader.Receiver] = nl
+	}
+
+	// save packet for resending
+	r.sentPackets[id] = p
+	delay := LINK_RESEND_TIMEOUT + time.Duration(rand.NormFloat64()*float64(LINK_RESEND_JITTER))
+	if int64(delay) < 0 {
+		delay = time.Duration(0)
+	}
+	time.AfterFunc(delay, func() {
+		r.resendTimeout <- id
+	})
+}
+
+func (r *router) resendPacket(id uint32) {
+	p, ok := r.sentPackets[id]
+	if ok {
+		// packet is still cached
+		delete(r.liveLinks, id)
+		p.Header.DsrHeader.AckRequest = nil
+		r.sendAlongSourceRoute(p)
 	}
 }
 
@@ -336,7 +363,12 @@ func (r *router) processAck(p *packet.Packet) {
 		return
 	}
 
-	// Drop request
+	// Remove packet from cache
+	id := *ack.Identification
+	delete(r.sentPackets, id)
+	log.Infof("removed sending from cache: %d rem", len(r.sentPackets))
+
+	// Update live link
 	p.Header.DsrHeader.Ack = nil
 	ll, ok := r.liveLinks[*ack.Source]
 	if ok {
