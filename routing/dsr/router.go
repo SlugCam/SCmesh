@@ -11,8 +11,6 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-const ERROR_REPORTING_TIMEOUT = 2 * time.Second
-
 // These data structures could be optimized
 type router struct {
 	sentPackets   map[uint32]*packet.Packet // map from ack id to packet
@@ -103,7 +101,7 @@ func (r *router) sendRouteRequest(target uint32) {
 	r.requestTable.sentRequest(target)
 	r.out <- *newRouteRequest(r.localID, target)
 	// TODO set timeout
-	time.AfterFunc(250*time.Millisecond, func() {
+	time.AfterFunc(50*time.Millisecond, func() {
 		r.processRouteRequestTimeout(target)
 	})
 }
@@ -172,16 +170,16 @@ func (r *router) addAckRequest(p *packet.Packet) {
 	ll, ok := r.liveLinks[p.Preheader.Receiver]
 	if ok {
 		switch {
-		case ll.sentBeforeSetTimeout < 3:
+		case ll.sentBeforeSetTimeout < ACK_REQUEST_BEFORE_TIMEOUT:
 			ll.sentBeforeSetTimeout += 1
 
-		case ll.sentBeforeSetTimeout == 3:
+		case ll.sentBeforeSetTimeout == ACK_REQUEST_BEFORE_TIMEOUT:
 			ll.sentBeforeSetTimeout += 1
 			// set timeout
 			t := time.Now().Add(ERROR_REPORTING_TIMEOUT)
 			ll.timeout = &t
 
-		case ll.sentBeforeSetTimeout > 3:
+		case ll.sentBeforeSetTimeout > ACK_REQUEST_BEFORE_TIMEOUT:
 			if ll.timeout != nil {
 				if time.Now().After(*ll.timeout) {
 					// TODO send route error
@@ -308,6 +306,12 @@ func (r *router) processRouteRequest(p *packet.Packet) bool {
 
 	// TODO First cache the route on the route request seen so far
 
+	//  In spec this is lower
+	// Check for route request entry to see if we have seen this route request
+	if r.requestTable.hasReceivedRequest(*p.Header.Source, *rr.Target, *rr.Id) {
+		return false // route request already seen
+	}
+
 	// Check if we are target
 	if *rr.Target == uint32(r.localID) {
 		reply := newRouteReply(rr.Addresses, *p.Header.Source, uint32(r.localID))
@@ -324,11 +328,6 @@ func (r *router) processRouteRequest(p *packet.Packet) bool {
 			log.Error("loop found in route request")
 			return false
 		}
-	}
-
-	// Check for route request entry to see if we have seen this route request
-	if r.requestTable.hasReceivedRequest(*p.Header.Source, *rr.Target, *rr.Id) {
-		return false // route request already seen
 	}
 
 	// At this point continue processing

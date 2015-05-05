@@ -14,6 +14,9 @@ const BROADCAST_ID = 0xFFFFFFFF
 const LINK_RESEND_TIMEOUT = 3 * time.Second
 const LINK_RESEND_JITTER = 1 * time.Second
 
+const ERROR_REPORTING_TIMEOUT = 2 * time.Second
+const ACK_REQUEST_BEFORE_TIMEOUT = 25
+
 type linkMaint struct {
 	sentBeforeSetTimeout int
 	timeout              *time.Time
