@@ -7,6 +7,7 @@ package dsr
 
 import (
 	"container/list"
+	"math/rand"
 
 	"github.com/SlugCam/SCmesh/packet/header"
 )
@@ -96,6 +97,8 @@ func (c *routeCache) removeNeighbor(neighbor uint32) {
 func (c *routeCache) getRoute(dest uint32) []uint32 {
 
 	var routes []*route
+	var weights []float64
+	var weightSum float64 = 0
 
 	// Find all valid routes
 	for e := c.l.Front(); e != nil; e = e.Next() {
@@ -103,15 +106,23 @@ func (c *routeCache) getRoute(dest uint32) []uint32 {
 		curRoute := findInnerRoute(curCached, dest)
 		if curRoute != nil {
 			routes = append(routes, curRoute)
+
+			var w float64 = 1 / float64(curRoute.cost)
+			weightSum += w
+			weights = append(weights, weightSum)
 		}
 	}
 
 	// Choose a route
 	if len(routes) > 0 {
-		return routes[0].nodes
-	} else {
-		return nil
+		r := rand.Float64() * weightSum
+		for i, v := range weights {
+			if r < v {
+				return routes[i].nodes
+			}
+		}
 	}
+	return nil
 }
 
 // findNodeIndex finds d (destination) in r (route). If it is found, it returns
