@@ -22,24 +22,24 @@ type router struct {
 	sentPackets         map[uint32]*packet.Packet // map from ack id to packet
 	resendTimeout       chan resendMessage
 	routeRequestTimeout chan uint32
-	liveLinks           map[uint32]linkMaint
 	localID             uint32
 	routeCache          *routeCache
 	sendBuffer          *sendBuffer
 	requestTable        *requestTable
+	linkErrCounter      map[uint32]int
 	out                 chan<- packet.Packet
 }
 
 func newRouter(localID uint32, out chan<- packet.Packet) *router {
 	r := new(router)
 	r.sentPackets = make(map[uint32]*packet.Packet)
+	r.linkErrCounter = make(map[uint32]int)
 	r.resendTimeout = make(chan resendMessage)
 	r.routeRequestTimeout = make(chan uint32)
 	r.localID = localID
 	r.routeCache = newRouteCache()
 	r.sendBuffer = newSendBuffer()
 	r.requestTable = newRequestTable()
-	r.liveLinks = make(map[uint32]linkMaint)
 	r.out = out
 	return r
 }
@@ -190,45 +190,6 @@ func (r *router) addAckRequest(p *packet.Packet, retryCount int) {
 		Source:         proto.Uint32(uint32(r.localID)),
 	}
 
-	// Detect broken links
-	// Make entry tracking acks outstanding
-	ll, ok := r.liveLinks[p.Preheader.Receiver]
-	if ok {
-		switch {
-		case ll.sentBeforeSetTimeout < ACK_REQUEST_BEFORE_TIMEOUT:
-			ll.sentBeforeSetTimeout += 1
-
-		case ll.sentBeforeSetTimeout == ACK_REQUEST_BEFORE_TIMEOUT:
-			ll.sentBeforeSetTimeout += 1
-			// set timeout
-			t := time.Now().Add(ERROR_REPORTING_TIMEOUT)
-			ll.timeout = &t
-
-		case ll.sentBeforeSetTimeout > ACK_REQUEST_BEFORE_TIMEOUT:
-			if ll.timeout != nil {
-				if time.Now().After(*ll.timeout) {
-					// TODO send route error
-					r.routeCache.removeNeighbor(p.Preheader.Receiver)
-					if p.Header.Destination != nil {
-						r.originatePacket(newErrorPacket(uint32(r.localID), *p.Header.Destination, &header.DSRHeader_NodeUnreachableError{
-							Salvage:                proto.Uint32(uint32(0)),
-							Source:                 proto.Uint32(uint32(r.localID)),
-							Destination:            p.Header.Destination,
-							UnreachableNodeAddress: proto.Uint32(uint32(p.Preheader.Receiver)),
-						}))
-					}
-				}
-			}
-		}
-	} else {
-		nl := linkMaint{
-			sentBeforeSetTimeout: 1,
-			timeout:              nil,
-		}
-
-		r.liveLinks[p.Preheader.Receiver] = nl
-	}
-
 	// save packet for resending
 	if retryCount < MAX_SENDS {
 		r.sentPackets[id] = p
@@ -241,6 +202,21 @@ func (r *router) addAckRequest(p *packet.Packet, retryCount int) {
 		})
 	} else {
 		log.Info("Packet hit max resends")
+		// error handling
+		c := r.linkErrCounter[p.Preheader.Receiver]
+		if c > PACKETS_DROPPED_BEFORE_LINK_ERROR {
+			// TODO send route error
+			r.routeCache.removeNeighbor(p.Preheader.Receiver)
+			if p.Header.Destination != nil {
+				r.originatePacket(newErrorPacket(uint32(r.localID), *p.Header.Destination, &header.DSRHeader_NodeUnreachableError{
+					Salvage:                proto.Uint32(uint32(0)),
+					Source:                 proto.Uint32(uint32(r.localID)),
+					Destination:            p.Header.Destination,
+					UnreachableNodeAddress: proto.Uint32(uint32(p.Preheader.Receiver)),
+				}))
+			}
+		}
+		r.linkErrCounter[p.Preheader.Receiver] = c + 1
 	}
 }
 
@@ -401,11 +377,7 @@ func (r *router) processAck(p *packet.Packet) {
 
 	// Update live link
 	p.Header.DsrHeader.Ack = nil
-	ll, ok := r.liveLinks[*ack.Source]
-	if ok {
-		ll.sentBeforeSetTimeout = 0
-		ll.timeout = nil
-	}
+	r.linkErrCounter[*ack.Source] = 0
 }
 func (r *router) processRouteError(p *packet.Packet) {
 	re := p.Header.DsrHeader.NodeUnreachableError

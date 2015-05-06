@@ -18,12 +18,7 @@ const MAX_SENDS = 5
 const LINK_RESEND_JITTER = 10 * time.Millisecond
 
 const ERROR_REPORTING_TIMEOUT = 10 * time.Second
-const ACK_REQUEST_BEFORE_TIMEOUT = 25
-
-type linkMaint struct {
-	sentBeforeSetTimeout int
-	timeout              *time.Time
-}
+const PACKETS_DROPPED_BEFORE_LINK_ERROR = 5
 
 // OriginationRequest is a struct used to describe a new packet we should
 // originate. They are used in RoutePackets to provide communication to this
