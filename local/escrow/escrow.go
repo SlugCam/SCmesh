@@ -38,7 +38,7 @@ const (
 
 // TODO priorities for distribute
 const (
-	FIRST_TIMEOUT           = 250 * time.Millisecond // Time to wa
-	ACK_TIMEOUT             = 250 * time.Millisecond
-	DISTRIBUTE_RELEASE_REST = 250 * time.Millisecond // time between each packet
+	FIRST_TIMEOUT           = 500 * time.Millisecond // Time to wa
+	ACK_TIMEOUT             = 500 * time.Millisecond
+	DISTRIBUTE_RELEASE_REST = 500 * time.Millisecond // time between each packet
 )

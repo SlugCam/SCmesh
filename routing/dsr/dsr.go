@@ -13,7 +13,8 @@ type Route []NodeID
 const RR_RESEND_TIMEOUT = 1 * time.Second
 
 const BROADCAST_ID = 0xFFFFFFFF
-const LINK_RESEND_TIMEOUT = 100 * time.Millisecond
+const LINK_RESEND_TIMEOUT = 2 * time.Second
+const MAX_SENDS = 5
 const LINK_RESEND_JITTER = 10 * time.Millisecond
 
 const ERROR_REPORTING_TIMEOUT = 10 * time.Second

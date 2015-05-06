@@ -230,7 +230,7 @@ func (r *router) addAckRequest(p *packet.Packet, retryCount int) {
 	}
 
 	// save packet for resending
-	if retryCount < 4 {
+	if retryCount < MAX_SENDS {
 		r.sentPackets[id] = p
 		delay := LINK_RESEND_TIMEOUT + time.Duration(rand.NormFloat64()*float64(LINK_RESEND_JITTER))
 		if int64(delay) < 0 {
