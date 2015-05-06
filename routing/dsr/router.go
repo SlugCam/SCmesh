@@ -168,14 +168,19 @@ func (r *router) forward(p packet.Packet) {
 	}
 }
 
-func (r *router) sendAlongSourceRoute(p *packet.Packet, resends int) {
-	if processSourceRoute(p) {
-		r.addAckRequest(p, resends)
+func (r *router) sendAlongSourceRoute(p *packet.Packet, retryCount int) {
+	if retryCount == 0 {
+		if processSourceRoute(p) {
+			r.addAckRequest(p, retryCount)
+			r.out <- *p
+		}
+	} else {
+		r.addAckRequest(p, retryCount)
 		r.out <- *p
 	}
 }
 
-func (r *router) addAckRequest(p *packet.Packet, resends int) {
+func (r *router) addAckRequest(p *packet.Packet, retryCount int) {
 	if p.Preheader.Receiver == BROADCAST_ID {
 		return
 	}
@@ -225,14 +230,14 @@ func (r *router) addAckRequest(p *packet.Packet, resends int) {
 	}
 
 	// save packet for resending
-	if resends < 4 {
+	if retryCount < 4 {
 		r.sentPackets[id] = p
 		delay := LINK_RESEND_TIMEOUT + time.Duration(rand.NormFloat64()*float64(LINK_RESEND_JITTER))
 		if int64(delay) < 0 {
 			delay = time.Duration(0)
 		}
 		time.AfterFunc(delay, func() {
-			r.resendTimeout <- resendMessage{id, resends + 1}
+			r.resendTimeout <- resendMessage{id, retryCount + 1}
 		})
 	} else {
 		log.Info("Packet hit max resends")

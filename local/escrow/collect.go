@@ -201,7 +201,7 @@ func Collect(pathPrefix string, incomingPackets <-chan packet.Packet, out chan<-
 			case r := <-scanRequest:
 				log.Infof("checking for completion of %d", r)
 				finished, err := c.scanFile(r)
-				log.Infof("log.Infof = ", finished, ", ", err)
+				log.Infof("Scan file showed finished=%v with", finished)
 				if err != nil {
 					log.Error("Error scanning collected file. ", err)
 				} else if finished {

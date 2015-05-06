@@ -48,8 +48,9 @@ type meta struct {
 }
 
 type outgoingFile struct {
-	meta    meta
-	timeout time.Time
+	meta            meta
+	timeout         time.Time
+	scanPlaceholder int64
 }
 
 type Distributor struct {
@@ -152,8 +153,9 @@ func (d *Distributor) loadMetadata(m meta) {
 		return
 	}
 	d.files[m.FileID] = &outgoingFile{
-		meta:    m,
-		timeout: time.Now(),
+		meta:            m,
+		timeout:         time.Now(),
+		scanPlaceholder: int64(0),
 	}
 	d.timeouts <- m.FileID
 }
@@ -206,6 +208,79 @@ func scanBytes(r *bufio.Reader) (data []byte, n int64, eof bool, err error) {
 			return
 		}
 	}
+}
+
+// TODO better error checking
+func (d *Distributor) sendChunk(fileID int64) {
+	f := d.files[fileID]
+
+	// TODO check if we are complete here, not at ACK
+	// make packet, send it off
+
+	dh := header.DataHeader{
+		Destinations: []uint32{f.meta.Destination},
+		Type:         header.DataHeader_FILE.Enum(),
+		FileHeader: &header.FileHeader{
+			FileId:    proto.Int64(fileID),
+			FileSize:  proto.Int64(f.meta.Size),
+			Type:      proto.String(f.meta.DataType),
+			Timestamp: proto.Int64(f.meta.Timestamp.Unix()),
+		},
+	}
+	offset := f.scanPlaceholder
+	outpath := path.Join(d.outPath, fmt.Sprintf("%d", fileID))
+
+	dataFile, err := os.Open(outpath)
+	if err != nil {
+		log.Error("sendChunk: ", err)
+		return
+	}
+	defer dataFile.Close()
+	offset, err = dataFile.Seek(offset, 0)
+	if err != nil {
+		log.Error("sendChunk: ", err)
+		return
+	}
+
+	r := bufio.NewReader(dataFile)
+
+	n, eof, err := scanNull(r)
+	if eof {
+		f.scanPlaceholder = 0
+		if offset == 0 {
+			// File done!
+		}
+		return
+	}
+	if err != nil {
+		log.Error("sendChunk: ", err)
+		return
+	}
+	offset += n
+
+	b, n, eof, err := scanBytes(r)
+
+	d.router.OriginateDSR(f.meta.Destination, offset, dh, b)
+
+	if err != nil {
+		log.Error("sendChunk: ", err)
+		return
+	}
+	if eof {
+		offset = 0
+	} else {
+		offset += n
+	}
+	f.scanPlaceholder = offset
+
+	//time.Sleep(DISTRIBUTE_RELEASE_REST)
+
+	// set timeout
+	f.timeout = time.Now().Add(DISTRIBUTE_RELEASE_REST)
+	time.AfterFunc(DISTRIBUTE_RELEASE_REST, func() {
+		d.timeouts <- fileID
+	})
+
 }
 
 // TODO better error checking
@@ -274,7 +349,8 @@ func (d *Distributor) checkTimeout(fileID int64) {
 	if !ok || time.Now().Before(f.timeout) {
 		return
 	}
-	d.sendRemaining(fileID)
+	//d.sendRemaining(fileID)
+	d.sendChunk(fileID)
 }
 
 func (d *Distributor) receiveACK(p packet.Packet) {

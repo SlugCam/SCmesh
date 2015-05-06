@@ -36,6 +36,7 @@ func dr(out chan<- packet.RawPacket) chan<- packet.RawPacket {
 			select {
 			case out <- v:
 			default:
+				log.Error("dropped raw packet")
 			}
 		}
 	}()
@@ -60,6 +61,7 @@ func db(out chan<- []byte) chan<- []byte {
 			select {
 			case out <- v:
 			default:
+				log.Error("dropped packed packet")
 			}
 		}
 	}()
