@@ -1,6 +1,7 @@
 package dsr
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -11,22 +12,29 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+type resendMessage struct {
+	id    uint32
+	count int
+}
+
 // These data structures could be optimized
 type router struct {
-	sentPackets   map[uint32]*packet.Packet // map from ack id to packet
-	resendTimeout chan uint32
-	liveLinks     map[uint32]linkMaint
-	localID       uint32
-	routeCache    *routeCache
-	sendBuffer    *sendBuffer
-	requestTable  *requestTable
-	out           chan<- packet.Packet
+	sentPackets         map[uint32]*packet.Packet // map from ack id to packet
+	resendTimeout       chan resendMessage
+	routeRequestTimeout chan uint32
+	liveLinks           map[uint32]linkMaint
+	localID             uint32
+	routeCache          *routeCache
+	sendBuffer          *sendBuffer
+	requestTable        *requestTable
+	out                 chan<- packet.Packet
 }
 
 func newRouter(localID uint32, out chan<- packet.Packet) *router {
 	r := new(router)
 	r.sentPackets = make(map[uint32]*packet.Packet)
-	r.resendTimeout = make(chan uint32)
+	r.resendTimeout = make(chan resendMessage)
+	r.routeRequestTimeout = make(chan uint32)
 	r.localID = localID
 	r.routeCache = newRouteCache()
 	r.sendBuffer = newSendBuffer()
@@ -62,7 +70,7 @@ func (r *router) originate(o OriginationRequest) {
 		}
 		// Output packet
 		//r.out <- *packet
-		r.sendAlongSourceRoute(packet)
+		r.sendAlongSourceRoute(packet, 0)
 	}
 }
 
@@ -80,6 +88,7 @@ func (r *router) originatePacket(p *packet.Packet) {
 		// If no route found perform route discovery
 		r.sendBuffer.addPacket(p)
 		// TODO initiateRouteDiscovery
+
 		r.requestDiscovery(dest)
 	} else {
 		// Otherwise add source route option to packet
@@ -89,7 +98,7 @@ func (r *router) originatePacket(p *packet.Packet) {
 		}
 		// Output packet
 		//r.out <- *p
-		r.sendAlongSourceRoute(p)
+		r.sendAlongSourceRoute(p, 0)
 	}
 
 }
@@ -97,12 +106,18 @@ func (r *router) originatePacket(p *packet.Packet) {
 // DISCOVERY FUNCTIONS
 
 func (r *router) sendRouteRequest(target uint32) {
-	log.Info("sendRR")
+	log.WithFields(log.Fields{
+		"sentTable":  fmt.Sprintf("%v", r.requestTable.sentRequests),
+		"routeCache": r.routeCache.dump(),
+	}).Infof("sendRR for target %d", target)
+
 	r.requestTable.sentRequest(target)
 	r.out <- *newRouteRequest(r.localID, target)
+	r.out <- *newRouteRequest(r.localID, target)
+	r.out <- *newRouteRequest(r.localID, target)
 	// TODO set timeout
-	time.AfterFunc(50*time.Millisecond, func() {
-		r.processRouteRequestTimeout(target)
+	time.AfterFunc(RR_RESEND_TIMEOUT, func() {
+		r.routeRequestTimeout <- target
 	})
 }
 func (r *router) requestDiscovery(target uint32) {
@@ -133,32 +148,37 @@ func (r *router) forward(p packet.Packet) {
 	nh.DsrHeader = &nd
 	p.Header = &nh
 
+	// TODO is this right place
+	r.processAckRequest(&p)
+	r.processAck(&p)
+
 	cont := r.processRouteRequest(&p)
 	if !cont {
 		return
 	}
 	// TODO process route reply
 	r.processRouteReply(&p)
-	r.processAckRequest(&p)
-	r.processAck(&p)
 	r.processRouteError(&p)
 
 	// Only forward if we were the receiver in the first place, broadcast not
 	// valid for source route anyway.
 	// TODO this should be anywhere where we respond on header options
 	if p.Preheader.Receiver == uint32(r.localID) {
-		r.sendAlongSourceRoute(&p)
+		r.sendAlongSourceRoute(&p, 0)
 	}
 }
 
-func (r *router) sendAlongSourceRoute(p *packet.Packet) {
+func (r *router) sendAlongSourceRoute(p *packet.Packet, resends int) {
 	if processSourceRoute(p) {
-		r.addAckRequest(p)
+		r.addAckRequest(p, resends)
 		r.out <- *p
 	}
 }
 
-func (r *router) addAckRequest(p *packet.Packet) {
+func (r *router) addAckRequest(p *packet.Packet, resends int) {
+	if p.Preheader.Receiver == BROADCAST_ID {
+		return
+	}
 	id := util.RandomUint32()
 	p.Header.DsrHeader.AckRequest = &header.DSRHeader_AckRequest{
 		Identification: proto.Uint32(id),
@@ -205,23 +225,27 @@ func (r *router) addAckRequest(p *packet.Packet) {
 	}
 
 	// save packet for resending
-	r.sentPackets[id] = p
-	delay := LINK_RESEND_TIMEOUT + time.Duration(rand.NormFloat64()*float64(LINK_RESEND_JITTER))
-	if int64(delay) < 0 {
-		delay = time.Duration(0)
+	if resends < 4 {
+		r.sentPackets[id] = p
+		delay := LINK_RESEND_TIMEOUT + time.Duration(rand.NormFloat64()*float64(LINK_RESEND_JITTER))
+		if int64(delay) < 0 {
+			delay = time.Duration(0)
+		}
+		time.AfterFunc(delay, func() {
+			r.resendTimeout <- resendMessage{id, resends + 1}
+		})
+	} else {
+		log.Info("Packet hit max resends")
 	}
-	time.AfterFunc(delay, func() {
-		r.resendTimeout <- id
-	})
 }
 
-func (r *router) resendPacket(id uint32) {
-	p, ok := r.sentPackets[id]
+func (r *router) resendPacket(m resendMessage) {
+	p, ok := r.sentPackets[m.id]
 	if ok {
 		// packet is still cached
-		delete(r.liveLinks, id)
+		delete(r.sentPackets, m.id)
 		p.Header.DsrHeader.AckRequest = nil
-		r.sendAlongSourceRoute(p)
+		r.sendAlongSourceRoute(p, m.count)
 	}
 }
 
@@ -292,7 +316,7 @@ func (r *router) processRouteReply(p *packet.Packet) {
 	sendable := r.sendBuffer.getSendable(nroute)
 	for _, op := range sendable {
 		// Output packet
-		r.sendAlongSourceRoute(op)
+		r.sendAlongSourceRoute(op, 0)
 	}
 }
 
@@ -306,17 +330,17 @@ func (r *router) processRouteRequest(p *packet.Packet) bool {
 
 	// TODO First cache the route on the route request seen so far
 
+	// Check if we are target
+	if *rr.Target == uint32(r.localID) {
+		reply := newRouteReply(rr.Addresses, *p.Header.Source, uint32(r.localID))
+		r.sendAlongSourceRoute(reply, 0)
+		return true // Is this right?
+	}
+
 	//  In spec this is lower
 	// Check for route request entry to see if we have seen this route request
 	if r.requestTable.hasReceivedRequest(*p.Header.Source, *rr.Target, *rr.Id) {
 		return false // route request already seen
-	}
-
-	// Check if we are target
-	if *rr.Target == uint32(r.localID) {
-		reply := newRouteReply(rr.Addresses, *p.Header.Source, uint32(r.localID))
-		r.sendAlongSourceRoute(reply)
-		return true // Is this right?
 	}
 
 	// Check if addresses contains our ip, if so drop packet immediately
@@ -357,6 +381,9 @@ func localCost() uint32 {
 }
 
 func (r *router) processAck(p *packet.Packet) {
+	if p.Preheader.Receiver != r.localID {
+		return
+	}
 	ack := p.Header.DsrHeader.Ack
 	if ack == nil {
 		return
@@ -382,7 +409,7 @@ func (r *router) processRouteError(p *packet.Packet) {
 	}
 
 	// Drop request
-	if *re.Destination == uint32(r.localID) {
+	if *re.Destination == r.localID {
 		p.Header.DsrHeader.NodeUnreachableError = nil
 	}
 

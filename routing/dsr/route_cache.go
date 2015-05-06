@@ -6,9 +6,12 @@ package dsr
 // TODO don't add duplicates, instead update timeout
 
 import (
+	"bytes"
 	"container/list"
+	"fmt"
 	"math/rand"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/packet/header"
 )
 
@@ -43,6 +46,15 @@ func newRouteCache() *routeCache {
 	return c
 }
 
+func (c *routeCache) dump() string {
+	b := new(bytes.Buffer)
+	for e := c.l.Front(); e != nil; e = e.Next() {
+		curCached := e.Value.([]cachedNode)
+		b.Write([]byte(fmt.Sprintf("%s\n", curCached)))
+	}
+	return b.String()
+}
+
 // addRoute adds a route to the cache. Note that we do not track the
 // last nodes cost this will be sent to zero.
 // TODO this uses the existing pointer, may not be safe. Check this.
@@ -58,6 +70,21 @@ func (c *routeCache) addRoute(route []*header.DSRHeader_Node, target uint32) {
 		address: target,
 		cost:    uint32(0),
 	}
+
+	// Check for duplicate
+	for e := c.l.Front(); e != nil; e = e.Next() {
+		curCached := e.Value.([]cachedNode)
+		if len(curCached) != len(cachedRoute) {
+			continue
+		}
+		for i, v := range curCached {
+			if v.address != cachedRoute[i].address {
+				continue
+			}
+		}
+		c.l.Remove(e)
+	}
+
 	c.l.PushBack(cachedRoute)
 }
 
@@ -94,6 +121,7 @@ func (c *routeCache) removeNeighbor(neighbor uint32) {
 // destination are not included. In other words this function will return an
 // array of the intermediate nodes to reach node dest.
 // TODO should return lowest cost path
+// 0 and 1 have same cost
 func (c *routeCache) getRoute(dest uint32) []uint32 {
 
 	var routes []*route
@@ -106,8 +134,13 @@ func (c *routeCache) getRoute(dest uint32) []uint32 {
 		curRoute := findInnerRoute(curCached, dest)
 		if curRoute != nil {
 			routes = append(routes, curRoute)
+			var w float64
+			if curRoute.cost == 0 {
+				w = 1
+			} else {
+				w = 1 / float64(curRoute.cost)
+			}
 
-			var w float64 = 1 / float64(curRoute.cost)
 			weightSum += w
 			weights = append(weights, weightSum)
 		}
@@ -121,6 +154,9 @@ func (c *routeCache) getRoute(dest uint32) []uint32 {
 				return routes[i].nodes
 			}
 		}
+	}
+	if len(routes) > 0 {
+		log.Error("Cache did not return route even though route exists")
 	}
 	return nil
 }

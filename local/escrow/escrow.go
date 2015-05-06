@@ -25,7 +25,7 @@ const (
 )
 
 const (
-	COL_FILE_SCAN_TIMEOUT = 5 * time.Second
+	COL_FILE_SCAN_TIMEOUT = 10 * time.Second
 )
 
 // For distribute
@@ -38,7 +38,7 @@ const (
 
 // TODO priorities for distribute
 const (
-	FIRST_TIMEOUT           = 3 * time.Second // Time to wa
-	ACK_TIMEOUT             = 2 * time.Second
+	FIRST_TIMEOUT           = 5 * time.Second // Time to wa
+	ACK_TIMEOUT             = 5 * time.Second
 	DISTRIBUTE_RELEASE_REST = 25 * time.Millisecond // time between each packet
 )

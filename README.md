@@ -8,6 +8,10 @@ development.**
 
 SCmesh is a daemon that implements mesh networking over a serial based wireless module (such as the WiFly). It is used to support an ad hoc networking mode in the SlugCam system.
 
+## Misc Notes
+
+A cost of 0 is equal to a cost of 1 to the network.
+
 ## WiFly Configuration
 
 These steps should get the WiFly (in particular the RN-171) ready to run this software. Note that a tool to send commands to multiple serial interfaces can be useful. One trick that can be used is tmux with connections open in all the panes of a window. `:setw synchronize-panes` will then send input to all panes.

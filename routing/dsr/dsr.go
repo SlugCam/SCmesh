@@ -10,11 +10,13 @@ import (
 type NodeID uint32
 type Route []NodeID
 
+const RR_RESEND_TIMEOUT = 1 * time.Second
+
 const BROADCAST_ID = 0xFFFFFFFF
-const LINK_RESEND_TIMEOUT = 3 * time.Second
+const LINK_RESEND_TIMEOUT = 1 * time.Second
 const LINK_RESEND_JITTER = 1 * time.Second
 
-const ERROR_REPORTING_TIMEOUT = 2 * time.Second
+const ERROR_REPORTING_TIMEOUT = 10 * time.Second
 const ACK_REQUEST_BEFORE_TIMEOUT = 25
 
 type linkMaint struct {
@@ -47,6 +49,8 @@ func RoutePackets(localID uint32, toForward <-chan packet.Packet, toOriginate <-
 				r.originate(o)
 			case ackIDToCheck := <-r.resendTimeout:
 				r.resendPacket(ackIDToCheck)
+			case target := <-r.routeRequestTimeout:
+				r.processRouteRequestTimeout(target)
 			}
 
 		}

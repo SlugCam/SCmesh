@@ -65,9 +65,6 @@ func (c *requestTable) receivedReply(target uint32) {
 	}
 }
 
-// hasReceivedReply returns true if a reply has been received since our last
-// request was sent. Used to see if we should resend a route request when a
-// timeout occurs.
 func (c *requestTable) discoveryInProcess(target uint32) bool {
 	v, ok := c.sentRequests[target]
 	if ok {
