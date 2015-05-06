@@ -249,6 +249,12 @@ func (d *Distributor) sendChunk(fileID int64) {
 		f.scanPlaceholder = 0
 		if offset == 0 {
 			// File done!
+		} else {
+			// set timeout
+			f.timeout = time.Now().Add(DISTRIBUTE_RELEASE_REST)
+			time.AfterFunc(DISTRIBUTE_RELEASE_REST, func() {
+				d.timeouts <- fileID
+			})
 		}
 		return
 	}
@@ -259,9 +265,7 @@ func (d *Distributor) sendChunk(fileID int64) {
 	offset += n
 
 	b, n, eof, err := scanBytes(r)
-
 	d.router.OriginateDSR(f.meta.Destination, offset, dh, b)
-
 	if err != nil {
 		log.Error("sendChunk: ", err)
 		return
