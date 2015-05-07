@@ -17,6 +17,9 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+var SendingLogCallback *func(Packet)
+var LocalID uint32
+
 const (
 	MAX_PACKET_LEN = 1460
 )
@@ -29,6 +32,7 @@ type RawPacket struct {
 
 type Preheader struct {
 	Receiver      uint32
+	Sender        uint32
 	PayloadOffset int64
 }
 
@@ -105,6 +109,7 @@ func (p *Packet) Pack(out chan<- []byte) {
 		// Preheader
 		newPreheader := p.Preheader // Will make a copy of the preheader
 		newPreheader.PayloadOffset = int64(originalOffset + relativeOffset)
+		newPreheader.Sender = LocalID
 		serializedPreheader := newPreheader.Serialize()
 		encodedPreheader := util.Encode(serializedPreheader)
 
@@ -130,6 +135,14 @@ func (p *Packet) Pack(out chan<- []byte) {
 		b = append(b, '\x04') // Section delimiter
 
 		out <- b
+
+		if SendingLogCallback != nil {
+			(*SendingLogCallback)(Packet{
+				Header:    p.Header,
+				Preheader: newPreheader,
+				Payload:   payloadSlice,
+			})
+		}
 
 		log.WithFields(log.Fields{
 			//"data":      string(payloadSlice),

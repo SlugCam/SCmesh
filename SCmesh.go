@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -13,6 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/SlugCam/SCmesh/config"
 	"github.com/SlugCam/SCmesh/local/gateway"
+	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/pipeline"
 	"github.com/SlugCam/SCmesh/routing/dsr"
 	"github.com/SlugCam/SCmesh/simulation"
@@ -37,6 +39,7 @@ func main() {
 	cost := flag.Int("cost", 0, "the cost of the node")
 	flag.Parse()
 
+	packet.LocalID = uint32(*localID)
 	dsr.Cost = *cost
 
 	// Modify logging level
@@ -59,10 +62,38 @@ func main() {
 	if *packetLog == "none" {
 		log.Info("not logging incoming packets")
 	} else {
-		log.Infof("logging incoming packets to: %s", *packetLog)
+		incomingPath := fmt.Sprintf("%s.in", *packetLog)
+		outgoingPath := fmt.Sprintf("%s.out", *packetLog)
+
+		// Outgoing packets
+		log.Infof("logging outgoing packets to: %s", outgoingPath)
+		fo, err := os.OpenFile(outgoingPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
+		if err != nil {
+			log.Error("error opening packet log file: ", err)
+		}
+
+		// TODO is this correct?
+		defer fo.Close()
+		enco := json.NewEncoder(fo)
+
+		recordPacket := func(p packet.Packet) {
+			err := enco.Encode(p.Abbreviate())
+			if err != nil {
+				log.Error("error logging packet: ", err)
+			}
+			err = fo.Sync()
+			if err != nil {
+				log.Error("error logging packet: ", err)
+			}
+		}
+
+		packet.SendingLogCallback = &recordPacket
+
+		// Incoming packets
+		log.Infof("logging incoming packets to: %s", incomingPath)
 		incoming := simulation.InterceptIncoming(&conf)
 
-		f, err := os.OpenFile(*packetLog, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
+		f, err := os.OpenFile(incomingPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
 		if err != nil {
 			log.Error("error opening packet log file: ", err)
 		}
@@ -78,7 +109,7 @@ func main() {
 				if err != nil {
 					log.Error("error logging packet: ", err)
 				}
-				f.Sync()
+				err = f.Sync()
 				if err != nil {
 					log.Error("error logging packet: ", err)
 				}
