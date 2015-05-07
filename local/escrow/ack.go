@@ -26,6 +26,15 @@ func (ack ACK) send(dest uint32, r pipeline.Router) {
 	enc := gob.NewEncoder(b)
 	enc.Encode(ack)
 	r.OriginateDSR(dest, int64(0), dh, util.Encode(b.Bytes()))
+	/*
+		time.AfterFunc(250*time.Millisecond, func() {
+			r.OriginateDSR(dest, int64(0), dh, util.Encode(b.Bytes()))
+		})
+		time.AfterFunc(1*time.Second, func() {
+			r.OriginateDSR(dest, int64(0), dh, util.Encode(b.Bytes()))
+		})
+	*/
+
 }
 
 func parseACK(p packet.Packet) (ack ACK, err error) {

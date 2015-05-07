@@ -14,11 +14,14 @@ const RR_RESEND_TIMEOUT = 1 * time.Second
 
 const BROADCAST_ID = 0xFFFFFFFF
 const LINK_RESEND_TIMEOUT = 2 * time.Second
-const MAX_SENDS = 5
+
+// MAX_SENDS=0 will not resend and PACKETS_DROPPED will become the
+// acutal packets dropped before a route error is sent.
+const MAX_SENDS = 0
 const LINK_RESEND_JITTER = 10 * time.Millisecond
 
 const ERROR_REPORTING_TIMEOUT = 10 * time.Second
-const PACKETS_DROPPED_BEFORE_LINK_ERROR = 5
+const PACKETS_DROPPED_BEFORE_LINK_ERROR = 30
 
 // OriginationRequest is a struct used to describe a new packet we should
 // originate. They are used in RoutePackets to provide communication to this
