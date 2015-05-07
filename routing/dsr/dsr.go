@@ -7,6 +7,9 @@ import (
 	"github.com/SlugCam/SCmesh/packet/header"
 )
 
+// TODO should not be a global
+var Cost int
+
 type NodeID uint32
 type Route []NodeID
 

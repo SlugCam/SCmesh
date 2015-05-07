@@ -14,6 +14,7 @@ import (
 	"github.com/SlugCam/SCmesh/config"
 	"github.com/SlugCam/SCmesh/local/gateway"
 	"github.com/SlugCam/SCmesh/pipeline"
+	"github.com/SlugCam/SCmesh/routing/dsr"
 	"github.com/SlugCam/SCmesh/simulation"
 	"github.com/tarm/serial"
 )
@@ -33,7 +34,10 @@ func main() {
 	serialDev := flag.String("serial", "/dev/ttyAMA0", "path of the serial device to use")
 	// TODO this is tacky
 	packetLog := flag.String("plog", "none", "path to log all packets to, or none for no logging")
+	cost := flag.Int("cost", 0, "the cost of the node")
 	flag.Parse()
+
+	dsr.Cost = *cost
 
 	// Modify logging level
 	if *debug {

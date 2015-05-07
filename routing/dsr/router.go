@@ -358,7 +358,7 @@ func (r *router) processRouteRequest(p *packet.Packet) bool {
 
 // TODO
 func localCost() uint32 {
-	return uint32(0)
+	return uint32(Cost)
 }
 
 func (r *router) processAck(p *packet.Packet) {
