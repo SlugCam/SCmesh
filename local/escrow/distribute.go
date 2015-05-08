@@ -249,6 +249,7 @@ func (d *Distributor) sendChunk(fileID int64) {
 		f.scanPlaceholder = 0
 		if offset == 0 {
 			// File done!
+			log.Infof("file %d received by node %d", fileID, f.meta.Destination)
 		} else {
 			// set timeout
 			f.timeout = time.Now().Add(DISTRIBUTE_RELEASE_REST)
