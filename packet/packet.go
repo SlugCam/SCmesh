@@ -55,7 +55,7 @@ func NewPacket() *Packet {
 	return p
 }
 
-const SERIALIZED_PREHEADER_SIZE = 12
+const SERIALIZED_PREHEADER_SIZE = 16
 
 func (p *Packet) Abbreviate() *AbbreviatedPacket {
 	return &AbbreviatedPacket{
@@ -71,6 +71,11 @@ func (p *Preheader) Serialize() []byte {
 	out := new(bytes.Buffer)
 
 	err := binary.Write(out, binary.LittleEndian, p.Receiver)
+	if err != nil {
+		log.Error("Problem with preheader serialization.")
+	}
+
+	err = binary.Write(out, binary.LittleEndian, p.Sender)
 	if err != nil {
 		log.Error("Problem with preheader serialization.")
 	}
@@ -174,6 +179,10 @@ func (raw *RawPacket) Parse() (pack Packet, err error) {
 	}
 	preheaderBuf := bytes.NewBuffer(decodedPreheader)
 	err = binary.Read(preheaderBuf, binary.LittleEndian, &pack.Preheader.Receiver)
+	if err != nil {
+		return
+	}
+	err = binary.Read(preheaderBuf, binary.LittleEndian, &pack.Preheader.Sender)
 	if err != nil {
 		return
 	}

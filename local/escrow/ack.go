@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"time"
 
 	"github.com/SlugCam/SCmesh/packet"
 	"github.com/SlugCam/SCmesh/packet/header"
@@ -30,10 +31,10 @@ func (ack ACK) send(dest uint32, r pipeline.Router) {
 		time.AfterFunc(250*time.Millisecond, func() {
 			r.OriginateDSR(dest, int64(0), dh, util.Encode(b.Bytes()))
 		})
-		time.AfterFunc(1*time.Second, func() {
-			r.OriginateDSR(dest, int64(0), dh, util.Encode(b.Bytes()))
-		})
 	*/
+	time.AfterFunc(4*time.Second, func() {
+		r.OriginateDSR(dest, int64(0), dh, util.Encode(b.Bytes()))
+	})
 
 }
 

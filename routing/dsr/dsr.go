@@ -13,7 +13,7 @@ var Cost int
 type NodeID uint32
 type Route []NodeID
 
-const RR_RESEND_TIMEOUT = 5 * time.Second
+const RR_RESEND_TIMEOUT = 1 * time.Second
 
 const BROADCAST_ID = 0xFFFFFFFF
 const LINK_RESEND_TIMEOUT = 2 * time.Second

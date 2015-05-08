@@ -40,5 +40,5 @@ const (
 const (
 	FIRST_TIMEOUT           = 250 * time.Millisecond // Time to wa
 	ACK_TIMEOUT             = 250 * time.Millisecond
-	DISTRIBUTE_RELEASE_REST = 250 * time.Millisecond // time between each packet
+	DISTRIBUTE_RELEASE_REST = 100 * time.Millisecond // time between each packet
 )
